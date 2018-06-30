@@ -1,0 +1,8 @@
+const AliceSeqNumber = 1
+const BobSeqNumber   = 3
+
+ALICE = (create_msg -> send_syn_msg[AliceSeqNumber] -> notify -> notify2 -> send_ack_msg[BobSeqNumber + 1] -> STOP).
+
+BOB   = (notify -> receive_syn_msg -> reply -> send_syn_ack[BobSeqNumber][AliceSeqNumber + 1] -> notify2 -> STOP).
+
+||HANDSHAKE = ( ALICE || BOB ).

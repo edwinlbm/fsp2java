@@ -1,0 +1,12 @@
+CORES = (red->orange->{blue, gray}->green->black->CORES | rose -> purple -> yellow -> CORES).
+/*
+@TRACE
+rose
+purple
+yellow
+*/
+
+*/
+Remover CORES
+petri-net.h
+*/

@@ -1,0 +1,162 @@
+CORES = (red->orange->{blue, gray}->green->black->CORESBR),
+CORESBR = {vermelho, verde} -> {preto, branco} -> preto -> CORESGR),
+CORESGR = ({rot, blau}->{blau, gelb}->CORESGR | {blau, gelb}->CORESGR | abc -> CORESBR).
+/*
+@TRACE
+red
+orange
+blue
+green
+black
+
+
+verde
+branco
+preto
+
+abc
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+TODO ---> Verificar se o OU funciona em Subprocesso e tratar casos como ausencia de valor no trace em vez de mostrar exception tentar mostrar uma
+msg mais elegante
+
+
+CORES = (red->orange->{blue, gray}->green->black->CORES | rose -> purple -> yellow -> CORES).
+"/*"
+@TRACE
+red
+orange
+blue
+green
+black
+"/"
+
+----------------- Adaptar
+
+CORES = (red->orange->green->black->CORES | rose -> purple -> yellow -> CORES).
+
+
+COUNT (N=3) = COUNT[0],
+COUNT[i:0..N] = (when(i<N) inc->COUNT[i+1]
+                |when(i>=1) dec->COUNT[i-1]
+).
+
+COUNTDOWN (N=3)  = COUNTDOWN[N],
+COUNTDOWN[i:0..N] =
+(when(i>=1) tick->COUNTDOWN[i-1]
+|when(i<1)beep->bla->STOP
+|stop->STOP
+
+).
+
+SWITCH = OFF,
+OFF
+= (on -> ON),
+ON
+= (off-> OFF).
+
+
+SWITCH = STOP.
+
+TRAFFICLIGHT = (red->orange->green->orange
+->black->orange->TRAFFICLIGHT).
+
+TRAFFICLIGHT = (red->orange->green->orange
+->black->orange->TRAFFICLIGHT | rose -> purple -> rose -> TRAFFICLIGHT).
+
+TRAFFICLIGHT = (red->orange->green->orange
+->black->orange->TRAFFICLIGHT).
+
+SWITCH = TEST,
+TEST   = (liga->LIGA),
+LIGA   = (desliga->TEST).
+
+SWITCH = STOP.
+
+SWITCH = (go->OFF),
+OFF    = (on -> STOP).
+
+SWITCH = (go->OFF | go->STOP),
+OFF    = (bla -> SWITCH).
+--------------------------
+
+COIN (N = 3*4, K = 5)  = (toss->abc->COIN[K]),
+COIN [j:0..N*2] = 
+(
+      when (N<j) repita->COIN[j-1]
+    | when (N==j) notifique->ST
+    | pare->STOP  
+),
+ST = (fim->STOP).
+
+
+-----O coin é escrito duas vezes
+    Talvez não encerrar a chave até que não ocorra mais o processo em questao
+    Vai ser preciso guardar em memoria tanto uma referencia para abrir o arquivo para uma nova leitura (estrutura com o nomes dos arquivos já criados)
+    bem como uma estrutura que contenha todos os processos nela em memoria
+
+    Nesse exemplo,  o que fazer com o ST que é chamado no loo? 
+        | when (N==j) notifique->ST
+        | pare->STOP  
+        ),
+        ST = (fim->STOP).
+
+    E se o loop nao for na processo principal? Tentar montar um exemplo
+
+COIN  = (toss->abc->ADBLOCK | tack->{ijk, fgh}->B | tic->{rf, mu}->C),
+A     = (heads->wio->C | bla->STOP),
+C     = (finalize->{dot, com}->STOP | exit->STOP).
+
+COIN  = (toss->HEADS|tack->TAILS | tic->TAILS),
+            HEADS = (heads->abc->COIN),
+            TAILS = ({nd, fsp}->oeee->{tails, ole}->teste->{adasd, asdasg}->MOEDA | hue->BR),
+			BR =    (finalize->MOEDA),
+            MOEDA = (abc->{dot, com}->STOP).
+
+
+
+RUNNING      = ({suspend,sleep}->NONRUNNABLE
+                |yield->RUNNABLE
+                |{stop, end}->TERMINATED
+                |yield->RUNNING).
+
+
+TODO :
+    metodos no when, nao fica aninhado qnd necessario
+    STOP
+    (go->COUNTDOWN[N]) ao inves de COUNTDOWN[N]
+
+*/

@@ -1,0 +1,19 @@
+valores trace:
+rose
+purple
+yellow
+CORES
+
+
+red
+orange
+green
+black
+CORES
+
+red
+orange
+blue
+green
+black
+CORES

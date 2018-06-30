@@ -1,0 +1,67 @@
+CORES = (red->orange->{blue, gray}->green->black->CORESBR),
+CORESBR = (vermelho->{cinza, branco}->roxo->{zul, preto}->CORESGR),
+CORESGR = (rot->{blau, gelb}->CORESGR).
+/*
+@TRACE
+blue
+red
+orange
+blue
+green
+black
+vermelho
+branco
+roxo
+preto
+rot
+blau
+*/
+
+
+
+>>>>>perguntar quando tiver menos que o esperado no trace, as suas acoes em menor quantidade em relacao ao FSP
+
+
+
+
+CORES = (red->orange->{blue, gray}->green->black->CORESBR),
+CORESBR = {vermelho, verde} -> {preto, branco} -> preto -> CORESGR),
+CORESGR = ({rot, blau}->{blau, gelb}->CORESGR | {blau, gelb}->CORESGR | abc -> CORESGR).
+/*
+@TRACE
+red
+orange
+blue
+green
+black
+
+verde
+branco
+preto
+
+gelb
+
+*/
+
+Analisar, está inserindo gelb duas vezes
+
+
+CORES = (red->orange->{blue, gray}->green->black->CORESBR),
+CORESBR = {vermelho, verde} -> {preto, branco} -> preto -> CORESGR),
+CORESGR = ({rot, blau}->{blau, gelb}->CORESGR | {blau, gelb}->CORESGR | abc -> CORESFIM).
+/*
+@TRACE
+red
+orange
+blue
+green
+black
+
+verde
+branco
+preto
+
+gelb
+
+
+*/

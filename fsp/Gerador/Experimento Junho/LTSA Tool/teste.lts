@@ -1,0 +1,7 @@
+SERVERv2 = (accept.request.deny
+            ->service->accept.reply->SERVERv2).
+CLIENTv2 = (call.request.deny
+            ->call.reply->continue->CLIENTv2).
+
+||CLIENT_SERVERv2 = (CLIENTv2 || SERVERv2)
+                    /{call.request/accept}.

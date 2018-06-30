@@ -1,0 +1,4 @@
+-- line 1 col 51: invalid Indice
+-- line 1 col 51: invalid Indice
+-- line 1 col 34: nomeMin expected
+-- line 1 col 64: "->" expected

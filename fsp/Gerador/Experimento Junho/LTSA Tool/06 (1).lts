@@ -1,0 +1,43 @@
+RADIO = (on->S1),
+S1 = ([108]->
+     (lock->S1
+     |scan->S2
+     |reset->S1
+     |off->RADIO)
+     ),
+S2 = ([107]->
+     (lock->S2
+     |scan->S3
+     |reset->S1
+     |off->RADIO)
+     ),
+S3 = ([106]->
+     (lock->S3
+     |scan->S4
+     |reset->S1
+     |off->RADIO)
+     ),
+S4 = ([105]->
+     (lock->S4
+     |scan->S5
+     |reset->S1
+     |off->RADIO)
+     ),
+S5 = ([104]->
+     (lock->S5
+     |scan->S6
+     |reset->S1
+     |off->RADIO)
+     ),
+S6 = ([103]->
+     (lock->S6
+     |scan->S7
+     |reset->S1
+     |off->RADIO)
+     ),
+S7 = ([102]->
+     (lock->S7
+     |scan->end->S1
+     |reset->S1
+     |off->RADIO)
+     ).

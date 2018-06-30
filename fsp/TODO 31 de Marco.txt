@@ -1,0 +1,64 @@
+TODO: 
+
+    Fatora processo -- reconhecer
+
+    nomeMin dentro de [ ] precisa ser verificado para que só funcione se i for declarado: i:Band e etc
+
+    testar acao.acao.acao->Processo na gramatica e ltsa
+
+    Removi o nomeMin na repeticao : {(nomeVar | numero)} 
+
+    ***Verificar se acao.acao->Processo mudando acao acao ->Processo aceita, não é pra aceitar
+        Fazer teste em casos que tenha repeticao do tipo
+        Tentar remover a repticao do CHARACTERS e fazer explicitamente para verificar se o erro de reconhecer espaço some.
+        E nesse caso?? 
+                        (nomeMin | nomeVar | numero ) {nomeMin | nomeVar | numero | underline}
+
+
+
+    Tentar colocar 0 junto com o numero e eliminar nzero
+
+    Ampliar a regra Intervalo *********
+            E verificar a nomeação, está com conflito de LL1
+    
+    Parentesis
+
+
+        TESTE (N = 10) = GO[0],
+        GO[i:0..N] = ( when ((i < N-1) || (i != 10)) repete -> GO[i+1]).
+
+    Acao e Processo como nome no formato "nome numero nome" --falta em alguns
+    
+    Verificar o mesmo método ocorrendo mais de uma vez com tomando ações diferentes
+
+    Se vier um numero entre [ ] não pode haver indice do tipo a[i]
+    
+    Ação do tipo [107]->ALGO aceita, mas tem de pensar na ação [B]->ALGO
+    
+    Verificar se os indices são os mesmo senão apresentar erro:
+    RADIO (N = 3) = GO[1], esse valor 1 ,no caso, tem de ser >= que o definido em GO[i:1..N]
+            GO[i:1..N] = (when (i < N)repita-> GO[i+1]
+			  |when (i == N) reset->GO[1]). 
+              reset->GO[1] não pode passar do limite N
+
+    Outro exemplo pra pensar:
+        RADIO (N = 3) = GO[N], 
+            GO[i:0..N] = (when (i <= N && i > 0)repita-> GO[i-1]
+			  |when (i == 0) reset->GO[3]).
+
+        
+        
+        const Bad12 = 10
+        RADIO (N = 12) = GO[N], 
+        GO[iaB21as:Bad12..N] = (
+                            when (iaB21as <= N && iaB21as > Bad12)repita-> GO[iaB21as-1]
+                            |
+                            when (iaB21as == 0) reset->GO[N]
+                            ).
+    
+    
+    Usar o @SuppressWarnings("unchecked") para omitir os erros do coco/r
+
+    Codificar em java
+
+

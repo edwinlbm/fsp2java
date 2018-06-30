@@ -1,0 +1,464 @@
+import java.io.FileWriter;
+import java.io.BufferedWriter;
+import java.io.PrintWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+
+
+COMPILER Fsp $F
+
+ArrayList<String> constantes = new ArrayList<String>();
+ArrayList<String> range = new ArrayList<String>();
+ArrayList<String> metodosAninhados = new ArrayList<String>();
+ArrayList<String> classesArray = new ArrayList<String>();
+
+String fspCode   = "";
+String fatoracao = "";
+String condicao = "";
+String maxValor = "";
+String minValor = "";
+String intervalo = "";
+String acaoProcesso = "";
+EscritaArquivo arquivo = null;
+// EscritaArquivo arquivo = new EscritaArquivo(); //se o buffer ficar todo ocupado, ele manda pro disco? ou rejeita?
+
+
+class EscritaArquivo {
+    final String FILE = System.getProperty("user.dir") + "/Saida/"; //Caso não exista, criar via Java mkdir
+    FileWriter fw = null;
+    PrintWriter out = null;
+    BufferedWriter bw = null;
+
+    public EscritaArquivo(String fileName) {
+        try {
+            this.fw = new FileWriter(FILE + fileName + ".java", true);
+            this.bw = new BufferedWriter(this.fw);
+            this.out = new PrintWriter(this.bw);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public FileWriter getArquivo() {
+        return this.fw;
+    }
+
+    public PrintWriter getEscritor() {
+        return this.out;
+    }
+
+    public void escrever(String dado) {
+        try{
+            this.out.println(dado);
+            this.bw.flush();
+        }catch (IOException e){
+            e.printStackTrace();
+        }    
+    }
+
+    public void encerrarEscrita(){
+        try {
+            if (this.bw != null) {this.bw.close();}
+            if (this.out != null) {this.out.close();}
+            if (this.fw != null) {this.fw.close();}
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+class Metodo{//tentar usar conceitos de orientação a objetos
+    public void addMetodo(EscritaArquivo arquivo, ArrayList<String> metodosAninhados){        
+    //testar se o array é != e size()>= 2 elementos
+        if(metodosAninhados.size() >= 2){
+            arquivo.escrever("\tpublic void " + metodosAninhados.get(metodosAninhados.size()-1) +"(){\n\t\t"+ fatoracao);
+            arquivo.escrever("\t}");
+            int pos = metodosAninhados.size()-1;
+            for(int i = metodosAninhados.size()-2; i >= 0; i--){
+                arquivo.escrever("\tpublic void " + metodosAninhados.get(i) +"(){\n\t\t"+ metodosAninhados.get(pos)+"();\n"+"\t}");
+                pos--;
+            }                                                        
+            arquivo.escrever(fspCode + "\n\t\t" + metodosAninhados.get(0) +"();" + "\n\t}");
+            //Separar o flush do "escrever" para não "forçar escrita no disco a todo momento"
+        }else if(metodosAninhados.size() == 1){
+            arquivo.escrever("\tpublic void " + metodosAninhados.get(0) +"(){\n\t\t"+ fatoracao);
+            arquivo.escrever("\t}");
+            arquivo.escrever(fspCode + "\n\t\t" + metodosAninhados.get(0) +"();" + "\n\t}");                            
+        }else if (fatoracao != ""){
+            arquivo.escrever(fspCode + "\n\t\t" + fatoracao + "\n\t}");
+        }else if(fspCode != ""){
+            arquivo.escrever(fspCode + "}");
+        } 
+        fatoracao = "";
+        fspCode = "";
+        metodosAninhados.clear(); //Verificar se qnd estiver vazio não dará erro no clear  
+    }
+}
+
+class Pares{
+    private String prim;
+    private String ult;
+
+    public Pares(String primeiro, String ultimo){
+        this.prim = primeiro;
+        this.ult = ultimo;
+    }
+
+    public String getPrim(){
+        return this.prim;
+    }
+    
+    public String getUlt(){
+        return this.ult;
+    }
+}
+ArrayList<Pares> escolhaDif = new ArrayList<Pares>();
+ArrayList<Pares> classeEmetodo = new ArrayList<Pares>();
+
+
+CHARACTERS
+    digito       = '0'..'9'.
+    lMai         = 'A'..'Z'.
+    lMin         = 'a'..'z'.
+
+TOKENS
+    numero       = digito{digito}.
+    nomeVar      = lMai({lMai}|{lMin}).
+    nomeMin      = lMin{lMin}.    
+
+COMMENTS FROM "/*" TO "*/"
+
+IGNORE '\r' + '\t' + '\n'
+
+PRODUCTIONS
+
+    Fsp             =  Definicoes Processo (. arquivo.escrever("}"); arquivo = null; metodosAninhados = null; range.clear(); constantes.clear(); .)".".  
+    
+    Definicoes      =  Const Definicoes | Range Definicoes | . //Limpar o array de ambos ao terminar o uso
+    
+    Const           =  "const" //guardar em uma estrutura de dados, pesquisar const em java
+                       nomeVar (. fspCode += "final int " + t.val + " ";  .)
+                       "="     (. fspCode += t.val + " ";  .)
+                       numero  (. fspCode += t.val + ";"; constantes.add(fspCode); fspCode = "";  .)
+                       .
+    Range           =  "range" 
+                       nomeVar (. intervalo = "int " + t.val + " "; .)
+                       "="     (. intervalo += t.val + " "; .) 
+                       Intervalo
+                       (. range.add(intervalo + "random.nextInt("+maxValor+" - "+minValor + " + 1) + "+minValor+";"); .)
+                       .
+    
+    Intervalo       =  numero (. minValor = t.val; .)
+                       ".." 
+                       ( 
+                           (
+                               nomeVar (. maxValor = t.val; .)
+                               | 
+                               nomeMin (. maxValor = t.val; .)
+                               |
+                               numero (. maxValor = t.val; .)
+                            ) 
+                            (
+                                Operacao (. maxValor += t.val; .)
+                                (
+                                    nomeVar (. maxValor += t.val; .)
+                                    |
+                                    numero  (. maxValor += t.val; .)
+                                    | 
+                                    nomeMin (. maxValor += t.val; .)
+                                )
+                                | 
+                            ) 
+                        )
+                        .
+    
+    Operacao        =  "+" | "-" | "*" | "/".
+    
+    IgualdadeDesig  =  "==" | ">" | "<" | ">=" | "<=" | "!=".
+    
+    Processo (. ArrayList<String> listaMetodos = new ArrayList<String>(); .)
+                    =  Regra /*FALTA O INDICE*/
+                       "=" 
+                       ( 
+                           ["("] 
+                                Transicao<out listaMetodos> 
+                           [")"] 
+                           | 
+                           nomeVar 
+                           Indice
+                        )
+                        
+                        Subprocesso
+                        (. 
+                            
+                            /*String metodosThread = "";
+                            metodosThread = "\tpublic void initThread(){"
+                                            +"\n\t\tthreadObj = new Thread();"
+                                            +"\n\t\tthreadObj.start();\n\t}"
+                                            +"\n\tpublic void stopThread(){"
+                                            +"\n\t\tthreadObj = null;\n\t}"
+                                            +"\n\tpublic void run(){"
+                                            +"\n\t\twhile(true){";
+                            arquivo.escrever(metodosThread);
+                            arquivo.escrever(condicao);
+                            arquivo.escrever("\t\t\tif(threadObj == null) {return;}");
+                            arquivo.escrever("\t\t}\n\t}"); */                                           
+
+                            
+
+
+                            // arquivo.escrever("\tpublic void initThread(){");
+                            // arquivo.escrever("\t\tthreadObj = new Thread();");
+                            // arquivo.escrever("\t\tthreadObj.start();\n\t}");
+                            // arquivo.escrever("\tpublic void stopThread(){");
+                            // arquivo.escrever("\t\tthreadObj = null;\n\t}");
+                            // arquivo.escrever("\tpublic void run(){}");
+                        .)
+                        .
+    
+    Regra           =  
+                    nomeVar
+                    (.  arquivo = new EscritaArquivo(t.val); 
+                        arquivo.escrever("import java.applet.Applet;");
+                        if(intervalo != ""){
+                            arquivo.escrever("import java.util.Random;");
+                        }     
+                        //A primeira classe é a principal que contem as constantes e etc.           
+                        arquivo.escrever("public class " + t.val + " extends Applet implements Runnable{"); String parametro = "";
+                    .)
+                       ( 
+                           "(" 
+                            nomeVar (. parametro = "\tfinal int " + t.val + " "; .) 
+                            "="     (. parametro += t.val + " "; .)
+                            numero  (. parametro += t.val + ";"; .)
+                            ")" 
+                            |
+                            Indice
+                        )
+                        (. 
+                            arquivo.escrever(parametro);                            
+                            //Obtidos da regra Definicao que vem ates de Processo
+                            for(int i = 0; i < constantes.size(); i++){
+                                arquivo.escrever("\t"+constantes.get(i));
+                            }
+                            for(int i = 0; i < range.size(); i++){
+                                arquivo.escrever("\t"+range.get(i));
+                            }
+                            arquivo.escrever("\t" + "Thread threadObj;");
+                            intervalo = "";
+                        .)
+                        .
+    RegraTipoII<. out String nomeClasse, ArrayList<String> nomeMetodo .> 
+                    =   
+                        //A ideia é que a primeira classe seja a principal com os metodos da thread e as demais tenham objetos chamados por tal classe.
+                        nomeVar  
+                        (. 
+                            arquivo.escrever("}"); arquivo.encerrarEscrita(); 
+                            arquivo = new EscritaArquivo(t.val); 
+                            arquivo.escrever("class " + t.val + "{");
+                            nomeClasse = t.val;
+                        .)
+                        ( 
+                            "(" 
+                            nomeVar (. String parametro = ""; parametro = "\tfinal int " + t.val + " "; .) 
+                            "="     (. parametro += t.val + " "; .)
+                            numero  (. parametro += t.val + ";"; arquivo.escrever(parametro); .)
+                            ")" //Arrumar, está gravando embaralhado
+                            |
+                            Indice
+                        )
+                        .
+    
+    Transicao<. out ArrayList<String> listaMetodos .> (.listaMetodos = new ArrayList<String>();.)
+                    =  AcaoDeGuarda 
+                    ( 
+                        (
+                            nomeMin 
+                            (.      fspCode = "\tpublic void " + t.val + "(){"; 
+                                    acaoProcesso = t.val; //Nao considera a repeticao
+                                    // listaMetodos = new ArrayList<String>();
+                                    // listaMetodos.add(t.val);
+                            .)
+                            (.
+                                if(condicao != ""){                                    
+                                    condicao += ("{" + t.val + "();}\n");                                    
+                                } 
+                            .)
+                            Indice
+                        )  
+                        | 
+                        AlfabetoExt
+                    ) 
+                    "->"
+                    RepeteAcao /*FALTA O INDICE em Java*/
+                             
+                    (
+                        FatoraProcesso /*FALTA O INDICE em Java*/
+                        | 
+                        nomeVar (. escolhaDif.add(new Pares(acaoProcesso, t.val));//Pega nome da classe
+                                    listaMetodos.add(t.val + " oe");
+                                .)
+                        Indice
+                    )
+                    (. 
+                        //Gravando os métodos (se mais de 1) no disco
+                        //o conteudo da string FspCode também é escrito no disco
+                        Metodo metodo = new Metodo();
+                        metodo.addMetodo(arquivo, metodosAninhados);
+                        metodo = null;                      
+
+                        for (int i = 0; i < listaMetodos.size(); i++){
+                            System.out.println("-->"+listaMetodos.get(i));
+                    }
+                        
+                        // System.out.println("Transicao:");
+                        // System.out.println("Size: "+ escolhaDif.size());
+                        // for(int i = 0; i < escolhaDif.size(); i++){
+                        //     System.out.print(escolhaDif.get(i).getPrim()+" ");
+                        //     System.out.println(escolhaDif.get(i).getUlt());
+                        // }
+                        
+                        // escolhaDif.add(new Pares());
+                        acaoProcesso = "";
+                    .)
+
+                    Escolha                    
+                    .
+    
+    RepeteAcao      =  nomeMin (.  metodosAninhados.add(t.val); .)
+                    Indice 
+                    "->" 
+                    RepeteAcao                     
+                    | 
+                    .
+    
+    Indice          =  "[" (IndiceTipoI | IndiceTipoII) "]" Indice | .
+    
+    IndiceTipoI     =  (numero |  nomeVar) ( (Operacao(numero | nomeMin | nomeVar)) | ).
+    
+    IndiceTipoII    =  nomeMin ( ( ":" (Intervalo | nomeVar ) ) | (Operacao(numero | nomeMin | nomeVar)) | ).
+    
+    FatoraProcesso  =  "("                            
+                            nomeMin (. arquivo.escrever("\tpublic void " + t.val + "(){}" ); fatoracao = t.val + "();"; .)//Considerando que sempre vem no fim
+                            Indice
+                            "->"
+                            nomeVar
+                            Indice
+                        ")"
+                        | 
+                        .
+    
+    Subprocesso (. String nomeClasse = ""; ArrayList<String> nomeMetodo = new ArrayList<String>(); ArrayList<String> listaMetodos = new ArrayList<String>();  .)
+                    =  "," RegraTipoII<out nomeClasse, nomeMetodo> (.System.out.println("class " + nomeClasse + "{");
+                                                                        
+                                                                    .)
+                     "=" ["("] 
+                                Transicao<out listaMetodos>  
+                                (. 
+                                    //Verificar se existe antes de add
+                                    
+                                .)
+                         [")"] Subprocesso | .
+    
+    Escolha         =  (
+                            "|" 
+                            AcaoDeGuarda
+                            ( 
+                                (
+                                    nomeMin (. fspCode = "\tpublic void " + t.val + "(){"; acaoProcesso = t.val;.)
+                                    (.
+                                        if(condicao != ""){
+                                            condicao += ("{" + t.val + "();}");                                            
+                                        }
+                                    .)
+                                     Indice
+                                ) 
+                                | 
+                                AlfabetoExt 
+                            ) 
+                            "->" 
+                            RepeteAcao 
+                            (
+                                FatoraProcesso 
+                                | 
+                                nomeVar
+                                (. 
+                                    for(int i = 0; i < escolhaDif.size(); i++){
+                                        if(escolhaDif.get(i).getPrim().contains(acaoProcesso)){
+                                            System.out.println("\nNao determinismo encontrado!");
+                                            System.out.println("A acao " + "\""+ acaoProcesso + "\""+ " ja foi definida com o processo " + "\"" + escolhaDif.get(i).getUlt() + "\"");
+                                            System.out.println("Deseja alterar o processo para " + "\""+ t.val + "\""+ "?");
+                                            System.out.println("0 - " + escolhaDif.get(i).getUlt());                                            
+                                            System.out.println("1 - " + t.val);
+                                            System.out.println();                                            
+                                        }
+                                    }    
+                                    escolhaDif.add(new Pares(acaoProcesso, t.val)); 
+                                .)
+                                Indice
+                            )
+                        )
+                        
+                        (.
+                            Metodo metodo = new Metodo();
+                            metodo.addMetodo(arquivo, metodosAninhados); 
+                            metodo = null;
+
+                            // System.out.println("Escolha:");
+                            // System.out.println("Size: "+ escolhaDif.size());
+                            
+                            // for(int i = 0; i < escolhaDif.size(); i++){
+                            //     System.out.print(escolhaDif.get(i).getPrim()+" ");
+                            //     System.out.println(escolhaDif.get(i).getUlt());
+                            // }
+                            acaoProcesso = "";
+
+                        .)
+
+                        Escolha 
+                        | 
+                        .
+    
+    AcaoDeGuarda    =  "when" (. condicao += "\t\t\tif";.)
+                        Guarda
+                        | 
+                        .
+    
+    Guarda          =  nomeVar (. condicao = condicao + "(" + t.val + ")"; .)
+                        | 
+                        Fator.
+    
+    Fator           =  "(" (. condicao += t.val; .)
+                            (
+                                numero (. condicao += t.val; .)
+                                | 
+                                nomeMin (. condicao += t.val; .)
+                                |
+                                nomeVar (. condicao += t.val; .)
+                            ) 
+                            [
+                                (
+                                    Operacao (. condicao += t.val; .)
+                                    | 
+                                    IgualdadeDesig (. condicao += t.val; .)
+                                ) 
+                                (
+                                    numero (. condicao += t.val; .)
+                                    |
+                                    nomeMin (. condicao += t.val; .)
+                                    |
+                                    nomeVar (. condicao += t.val; .)
+                                 )
+                            ] 
+                        ")" (. condicao += t.val; .)
+                        .
+    
+    AlfabetoExt     =  "{" 
+                            nomeMin (. arquivo.escrever("\tpublic void " + t.val +"(){\n\t}"); .) 
+                            {
+                                "," nomeMin (. arquivo.escrever("\tpublic void " + t.val +"(){\n\t}"); .)
+                            } 
+                        "}".
+
+END Fsp.

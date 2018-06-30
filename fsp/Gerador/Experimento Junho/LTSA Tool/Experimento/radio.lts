@@ -1,0 +1,20 @@
+const Top = 108
+const Bottom = 102
+range Band = Bottom..Top
+
+RADIO = (on->[Top]->ON[Top]),
+
+ON[i:Band] = 
+			(
+				when (i>Bottom) scan->SCAN[i-1] 
+				| off->RADIO 
+				| reset->ON[Top] 
+				| lock->ON[i]
+			),
+
+SCAN[j:Band] = 
+				(
+					when (j>Bottom) [j]->ON[j] 
+					|
+					when (j==Bottom) [j]->end->[Top]->ON[Top]
+				).

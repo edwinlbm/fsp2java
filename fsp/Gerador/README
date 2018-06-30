@@ -1,0 +1,35 @@
+===================================================================================================================================================================
+Laboratório de Programação Avançada - Engenharia de Software
+
+Gerador Básico
+
+A ideia do gerador é exemplificar a conversão da notação algébrica de Processos de Estados Finitos (FSP) para uma linguagem de programação (Java - atualmente).
+    A geração respeita a organização das classes em arquivos correspondentes com o auxílio de uma classe Main para execução do código.
+        A Main implementa a programação concorrente por meio da classe Runnable que é a interface padrão para Thread.
+
+Seguir a organização dos códigos gerados pode ser um ponto inicial para auxiliar nos trabalhos da disciplina que necessitem gerar código FSP -> Java utilizando programação concorrente.
+
+Para executar o Gerador entre no diretório Gerador e digite no bash:
+
+    java -jar Gerador2018.jar entrada.txt
+
+    Onde "entrada.txt" é o arquivo que contém a notação FSP e o Trace para verificar a sua alcançabilidade, isto é, se o mesmo é válido ou não.
+    
+    O arquivo "Outros Exemplos.txt" contém mais exemplos em notação FSP com o Trace para verificação.
+
+        Para testar um destes exemplos basta copiar para o arquivo "entrada.txt" que alimenta o Gerador. 
+
+
+Os arquivos gerados encontram-se no diretório Saida.
+    Para testar o código gerado, entre no diretório Saida e faça os seguintes comandos no bash:
+        javac *.java
+        java MainNomeDaClasse
+
+
+
+Autor:   Edwin Juan
+Contato: ejlbm@icomp.ufam.edu.br
+===================================================================================================================================================================
+
+
+

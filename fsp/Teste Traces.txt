@@ -1,0 +1,88 @@
+
+SWITCH = (on->off->SWITCH).
+||SWITCHES(N=2) = (s[i:1..3]:SWITCH).
+/*
+@TRACE
+off$.on
+on$.off
+off$.on
+on$.of
+*/
+=============================
+SWITCH = OFF,
+OFF = (on -> ON), 
+ON  = (off-> OFF).
+/*
+@TRACE
+off$.on
+on$.off
+off$.on
+on$.of
+*/
+
+SWITCH = OFF,
+OFF = (on ->(off->OFF)).
+/*
+@TRACE
+off$.on
+off$.off
+*/
+
+SWITCH = (on->off->SWITCH).
+/*
+@TRACE
+switch$.on
+switch$.off
+*/
+=============================
+
+=============================
+TRAFFICLIGHT = (red->orange->green->orange -> TRAFFICLIGHT).
+/*
+@TRACE
+trafficlight$.red
+trafficlight$.orange
+trafficlight$.green
+trafficlight$.orange
+*/
+=============================
+
+=============================
+DRINKS = (red->coffee->DRINKS
+|blue->tea->DRINKS
+).
+/*
+@TRACE
+drinks$.red
+drinks$.coffee
+*/
+
+DRINKS = (red->coffee->DRINKS
+|blue->tea->DRINKS
+).
+/*
+@TRACE
+drinks$.blue
+drinks$.tea
+*/
+
+=============================
+COIN = (toss->HEADS|toss->TAILS),
+HEADS= (heads->COIN),
+TAILS= (tails->COIN).
+/*
+@TRACE
+coin$.toss
+heads$.heads
+coin$.toss
+tails$.tails
+*/
+=============================
+
+CHAN = (in->CHAN |in->out->CHAN).
+/*
+@TRACE
+chan$.in
+chan$.in
+chan$.out
+*/

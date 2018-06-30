@@ -1,0 +1,18 @@
+nomeClassesMetodos
+
+Tipo: Nupla.
+Descrição: Array para armazenar o nome do processo, os seus métodos e o próximo processo.
+
+
+arrayNupla
+
+Tipo: Nupla.
+Descrição: Array principal para armazenar o nome do processo, os seus métodos e o próximo processo.
+
+
+arrayLista
+
+Tipo: ArrayLista
+Descrição: Array para armazenar o nome do processo, os seus métodos e o próximo processo.
+
+

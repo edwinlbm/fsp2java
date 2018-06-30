@@ -1,0 +1,198 @@
+/*
+Quarta, 24 de Janeiro de 2018
+
+    Casos testados
+
+    Process = Local,
+    Local   = (b -> Stop).
+
+    OFF = (on -> ON),
+    ON = (off-> OFF).
+
+    ----> Chamar um método dentro de outro
+    SWITCH = OFF,
+    OFF = (on ->(off->OFF)). 
+
+    SWITCH = OFF,
+    OFF = (on ->off->OFF).
+
+    TRAFFICLIGHT = (red->orange->green->orange->TRAFFICLIGHT).
+
+
+Quinta, 25 de Janeiro de 2018
+
+
+    Casos testados
+
+        Escolha (Choice):
+
+            DRINKS = (red->coffee->DRINKS
+            |blue->tea->DRINKS
+            |red->DRINKS).
+
+            COIN  = (toss->HEADS|toss->TAILS),
+            HEADS = (heads->COIN),
+            TAILS = (tails->COIN).
+
+            CHAN = (in->CHAN
+            |in->out->CHAN
+            ).
+
+        Guarded actions:
+
+            COUNT = COUNT,
+            COUNT = (when N inc->COUNT
+            |when Zero dec->COUNT
+            ).  
+
+        Constantes e intervalos:
+            const X = 1
+            range I = 0..X
+            range Y = 0..2*I
+            const W = 8
+        
+        Guarded actions:
+        
+            Loop      = (go -> Intervalo),
+            Intervalo = (when I menos -> Intervalo). 
+
+        Parâmetro de processo:
+        
+            Loop (X = 1000) = (go -> Intervalo),
+            Intervalo (Y = 100) = (when I menos -> Intervalo).
+
+        Parâmetro de processo e processos indexados:
+        
+            BUFF = (in[i:0..3]->out[i]->BUFF).
+
+            BUFF(N=3) = (in[i:0..N]->out[i]->BUFF).    
+
+
+Sexta, 26 de Janeiro de 2018
+
+    Casos testados
+
+        Processo indexado em uma fatoração:
+        
+            BUFF = (in[0]->(out[0]->BUFF)).
+
+        Processamento indexado em uma Escolha:
+
+            BUFF = (in[0]->out[0]->BUFF
+            | abc[1] -> def[1]->STOP).
+
+            BUFF = (in[0]->out[0]->BUFF
+            | abc[1] -> def[1]->STOP
+            | abc[1]->STOP
+            ).
+
+            BUFF = (in[0]->out[0]->BUFF
+            |in[1]->out[1]->BUFF
+            |in[2]->out[2]->BUFF
+            |in[3]->out[3]->BUFF
+            ).
+
+        Índice com operação no processo:
+
+            COUNT (N=3)   = COUNT[0],
+            COUNT[i:0..N] = (when N inc->COUNT[2]
+            |when I dec->COUNT[i+i]
+            ).
+
+        Condição na guarda com índice contendo operação no processo:
+
+            COUNT (N=3)   = COUNT[0],
+            COUNT[i:0..N] = (when (i-2) inc->COUNT[i:0..N]
+            |when I dec->COUNT[i+i]
+            ).
+
+            COUNT (N=3)   = COUNT[0],
+            COUNT[i:0..N] = (when(i<N) inc->COUNT[i+1]
+            |when(i!=0) dec->COUNT[i-1]
+            ).
+
+            COUNT (N=3)   = COUNT[0],
+            COUNT[i:0..N] = (when(i<N) inc->COUNT[i+1]
+            |when(i!=0) dec->COUNT[i-1]
+            ).
+
+            COUNTDOWN (N=3)   = (start->COUNT[N]),
+            COUNTDOWN[i:0..N] = 
+            (when(i>0) tick->COUNT[i-1]
+            |when(i==0)beep->STOP
+            |stop->STOP
+            ).
+
+
+
+
+Sábado, 27 de Janeiro de 2018
+    
+    Casos testados:
+
+        const False = 0
+        P = (when (False) doanything->P).
+        
+        Operações no índice:
+        const False = 0
+        P = (when (False) doanything->P[2-N]).
+
+        Intervalo no índice suportando operações:
+        const False = 0
+        P = (when (False) doanything->P[i:0..i*i]).
+
+        Ação com dois valores de entrada:
+        SUM        = (in[a:T][b:T]->TOTAL[a+b]),
+        TOTAL[s:R] = (out[s]->SUM).
+
+        Ação com dois valores de entrada e saída && constantes && range:
+        const N = 1
+        range T = 0..N
+        range R = 0..2*N
+
+        SUM        = (in[a:T][b:T]->TOTAL[a+b]),
+        TOTAL[s:R] = (out[s][c:W]->SUM).
+
+        RUNNING      = ({suspend,sleep}->NONRUNNABLE
+        |yield          ->RUNNABLE
+        |{stop, end}     ->TERMINATED
+        | run            ->RUNNING).
+
+
+        const N = 1
+        const K = 3
+        range T = 0..N
+        range R = 0..2*N
+        const X = 0
+
+        SUM        = (in->TOTAL),
+        TOTAL      = (out->SUM).
+
+Terça, 30 de Janeiro de 2018
+
+    Converter vários métodos para Java:
+    SWITCH = OFF,
+    OFF = (on->power->out->input->output->OFF). 
+
+    SWITCH = OFF,
+    OFF = (on->work->(off->OFF)).
+
+    Arrumar os parâmetros para virem na ordem correta
+    COIN(N = 4)  = (toss->HEADS|toss->TAILS),
+    HEADS (X= 10) = (heads->COIN),
+    TAILS(Y = 5) = (tails->COIN). 
+
+Quarta, 31 de Janeiro de 2018
+
+    Range, Const e Alfabeto em Java:
+    const X = 10
+    range Y = 0..X
+    const K = 3000
+    COUNTDOWN (N=3)   = (start->COUNT[N]),
+    COUNTDOWN[i:0..N] = 
+    (when(i>0) tick->COUNT[i-1]
+    |when(i==0)beep->STOP
+    |{finalize,stop}->STOP
+    ).    
+        
+*/

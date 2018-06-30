@@ -1,0 +1,186 @@
+COMPILER grammar
+
+CHARACTERS
+    digito       = '0'..'9'.
+    lMai         = 'A'..'Z'.
+    lMin         = 'a'..'z'.
+
+TOKENS
+    numero       = digito{digito}.
+    nomeVar      = lMai({lMai}|{lMin}).
+    nomeMin      = lMin{lMin}.    
+
+COMMENTS FROM "/*" TO "*/"
+
+IGNORE '\r' + '\t' + '\n'
+
+PRODUCTIONS
+
+    grammar             =  Definicoes Processo ".".  
+    
+    Definicoes      =  Const Definicoes | Range Definicoes | . //Limpar o array de ambos ao terminar o uso
+    
+    Const 
+              =  "const" nomeVar  "=" numero.
+
+    Range           =  "range" nomeVar "=" Intervalo.
+    
+    Intervalo       =  numero".." ( (nomeVar|nomeMin|numero) ( Operacao (nomeVar  | numero  |     nomeMin ) |    ) ).
+    
+    Operacao        =  "+" | "-" | "*" | "/".
+    
+    IgualdadeDesig  =  "==" | ">" | "<" | ">=" | "<=" | "!=".
+    
+    Processo        =  Regra /*FALTA O INDICE*/
+                       "=" 
+                       ( 
+                           ["("] Transicao [")"] 
+                           | 
+                           nomeVar 
+                           Indice
+                        ) 
+                        Subprocesso                        
+                        .
+    
+    Regra           =  
+    
+                        nomeVar 
+                    
+                       ( 
+                           "(" 
+                            nomeVar  
+                            "="     
+                            numero  
+                            ")" 
+                            |
+                            Indice
+                        )                        
+                        .
+    RegraTipoII     =   nomeVar  //Criei outra regra pra diferenciar do nome da classe
+                        ( 
+                            "(" 
+                            nomeVar  
+                            "="     
+                            numero  
+                            ")" //Arrumar, está gravando embaralhado
+                            |
+                            Indice
+                        )
+                        .
+    
+    Transicao       =  AcaoDeGuarda 
+                    ( 
+                        (
+                            nomeMin 
+                            
+                            Indice
+                        )  
+                        | 
+                        AlfabetoExt
+                    ) 
+                    "->"
+                    RepeteAcao /*FALTA O INDICE em Java*/
+                             
+                    (
+                        FatoraProcesso /*FALTA O INDICE em Java*/
+                        | 
+                        nomeVar 
+                        Indice
+                    )                    
+
+                    Escolha                    
+                    .
+    
+    RepeteAcao      =  nomeMin 
+                    Indice 
+                    "->" 
+                    RepeteAcao                     
+                    | 
+                    .
+    
+    Indice          =  "[" (IndiceTipoI | IndiceTipoII) "]" Indice | .
+    
+    IndiceTipoI     =  (numero |  nomeVar) ( (Operacao(numero | nomeMin | nomeVar)) | ).
+    
+    IndiceTipoII    =  nomeMin ( ( ":" (Intervalo | nomeVar ) ) | (Operacao(numero | nomeMin | nomeVar)) | ).
+    
+    FatoraProcesso  =  "("                            
+                            nomeMin
+                            Indice
+                            "->"
+                            nomeVar
+                            Indice
+                        ")"
+                        | 
+                        .
+    
+    Subprocesso     =  "," RegraTipoII "=" ["("] Transicao [")"] Subprocesso | .
+    
+    Escolha         =  (
+                            "|" 
+                            AcaoDeGuarda
+                            ( 
+                                (
+                                    nomeMin 
+                                    
+                                     Indice
+                                ) 
+                                | 
+                                AlfabetoExt 
+                            ) 
+                            "->" 
+                            RepeteAcao 
+                            (
+                                FatoraProcesso 
+                                | 
+                                nomeVar
+                                
+                                Indice
+                            )
+                        )
+                        Escolha 
+                        | 
+                        .
+    
+    AcaoDeGuarda    =  "when" 
+                        Guarda
+                        | 
+                        .
+    
+    Guarda          =  nomeVar 
+                        | 
+                        Fator.
+    
+    Fator           =  "(" 
+                            (
+                                numero 
+                                | 
+                                nomeMin 
+                                |
+                                nomeVar 
+                            ) 
+                            [
+                                (
+                                    Operacao 
+                                    | 
+                                    IgualdadeDesig 
+                                ) 
+                                (
+                                    numero 
+                                    |
+                                    nomeMin 
+                                    |
+                                    nomeVar 
+                                 )
+                            ] 
+                        ")" 
+                        .
+    
+    AlfabetoExt     =  "{" 
+                            nomeMin  
+                            {
+                                "," nomeMin 
+                            } 
+                        "}".
+
+END grammar.

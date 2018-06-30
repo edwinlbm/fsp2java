@@ -1,0 +1,2202 @@
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.io.File;
+
+//Inicio do compilador
+COMPILER Fsp3 /*$F*/
+//Array para armazenar as constantes
+ArrayList<String> arrayConstantes   = new ArrayList<String>();
+//Array para armazenar os intervalos
+ArrayList<String> arrayRange        = new ArrayList<String>();
+//Array para salvar os metodos de um processo na regra Transicao
+ArrayList<String> nomeMetodos       = new ArrayList<String>();
+//Array para armazenar a lista de metodos que formam o alfabeto de um processo
+ArrayList<String> arrayAlfabeto     = new ArrayList<String>();
+//Array para armazenar os metodos de um processo na regra Escolha
+ArrayList<String> arrayEscolha;
+//Array para armazenar as acoes/metodos da regra Escolha quando ha "when" em um loop
+ArrayList<String> arrayMetodoLoop   = null;
+//Array para armazenar os parametros de um processo
+ArrayList<Pares> procParam          = null;
+//Array para armazenar os metodos e o proximo processo (objeto a ser instanciado em Java)
+ArrayList<ArrayLista> arrayLista    = new ArrayList<ArrayLista>();
+//Array para armazenar o nome do processo, os seus metodos e o proximo processo
+ArrayList<Nupla> nomeClassesMetodos = new ArrayList<Nupla>();
+//Array principal para armazenar o nome do processo, os seus metodos e o proximo processo
+ArrayList<Nupla> arrayNupla         = new ArrayList<Nupla>();
+//Array para armazenar cada item ( if(x> y) ) do loop na forma i:0..N
+ArrayList<DadosLoop> arrayDadosLoop = new ArrayList<DadosLoop>();
+ArrayList<Relabelling> relabelling = new ArrayList<Relabelling>();
+//Array que contem os dados de cada processo
+ArrayList<ArrayList<Nupla>> arrayProcessos = new ArrayList<>();
+ArrayList<ComposicaoParalelaData> arrayComposicaoParalela = new ArrayList<ComposicaoParalelaData>();
+ArrayList<DadosExecucao> dadosExecucao = new ArrayList<DadosExecucao>();
+ArrayList<EscolhaCaminho> arrayCaminho;
+ArrayList<DadosRepeticao> arrayDadosRepeticao = new ArrayList<DadosRepeticao>();
+//Estrutura de dados que contém o nome da composição e os seus respectivos dados
+ComposicaoParalelaData composicaoParalelaData = null;
+//Objeto com os dados de loop em uma composicao paralela usando rótulo 
+DadosRepeticaoParalela dadosRepeticaoParalela;
+DadosRepeticao dadosRepeticao = new DadosRepeticao();
+Condicao condicao = null;
+Condicao operacao = null;
+CondicaoOperacao condicaoOperacao = null;
+HashMap<String,ArrayList<String>> dicionario = new HashMap<String, ArrayList<String>>();
+ArrayList<Escolhas> escolhas = new ArrayList<Escolhas>();
+ArrayList<String> traceTmp = new ArrayList<String>();
+
+// ArrayList<DadosRepeticaoParalela> arrayDadosRepeticaoParalela = new ArrayList<DadosRepeticaoParalela>();
+//Variavel para armazenar o nome da classe temporariamente
+String nomeClasse                   = "";
+//Variavel para armazenar a acao/metodo escolhida de um alfabeto
+String stringNomeAcao               = "";
+//Variável para armazenar o nome do subprocesso
+String nomeProcessoFatora           = "";
+//Variavel para armazenar um numero | nomeVar | nzero da regra IndiceTipoI
+String processoIndexadoProducao     = "";
+//Variavel para armazenar dados da regra Condicao que estaram no metodo run() do programa principal
+String stringRun                    = "";                                                
+//Indice global para verificar em tempo de execução se dado elemento do Trace eh satisfeito
+int indexTrace                      = 0;
+//Indice global da regra Subprocesso para verificar em tempo de execução se dado elemento do Trace eh satisfeito
+int indexTraceSub                   = 0;
+//TODO ---> Variavel temporaria enquanto a repeticao de metodos com o mesmo nome nao eh solucionada
+int metodoRepetido                  = 1;
+//flag para validar a continucao do Trace caso o caminho atual seja valido na regra Transicao
+boolean flagTraceContinue           = false;
+//flag para validar a continucao do Trace caso o caminho atual seja valido na regra Escolha/RepeteAcaoEscolha
+boolean flagTraceEscolha            = false;
+//Evita que em um OU grave-se apenas um metodo do tipo (abc -> def -> PROCESSO) quando houver mais de uma opcao na regra Escolha
+boolean flagAcaoGuarda              = false;
+//Previne que em um loop o metodo de um objeto chamado do while seja instanciado e chamado por essa nova instancia
+//Desta forma a pilha nao estoura
+boolean ultimoMetodo                = false;
+//Informa se ha um loop ou Stop, utilizado no programa principal
+boolean flagLoop                    = false;
+//char para evitar nomes repetidos, concatena-se como o processo que ira executar uma ação
+int alfabetoParalelo = 1;
+//Objeto para acessar o array com a sequencia do Trace
+LeituraTrace objTrace               = null;
+//Objeto para manipulacao de dados no disco
+EscritaArquivo arquivo              = null;
+//Objeto que reune os metodos utilizados para manipulacao de dados
+MetodosUtilitarios objUtilitarios   = new MetodosUtilitarios();
+//Objeto para manipulacao de itens que serao utilizados pelo programa principal
+DadosLoop dadosLoop                 = new DadosLoop();
+
+//Metodo para remover o uppercase dos nomes dos processos
+//Considerando que a entrada é upperCase
+public String reformatClassName(String nomeClasse){
+    return nomeClasse.charAt(0) + nomeClasse.substring(1).toLowerCase();
+}
+
+CHARACTERS
+    digito       = '0'..'9'.
+    lMai         = 'A'..'Z'.
+    lMin         = 'a'..'z'.
+    underscore   = '_'.
+
+TOKENS
+    numero       = digito{digito}.
+    nomeVar      = lMai{lMai | lMin | digito | underscore}.
+    nomeMin      = lMin{lMin | lMai | digito | underscore}.
+
+COMMENTS FROM "/*" TO "*/"
+
+IGNORE '\r' + '\t' + '\n'
+
+PRODUCTIONS
+
+    Fsp3            = 
+    //DEBUG: nomeVar "=" "(" (nomeMin| "[" numero "]") "->" (ParentesisFatora | nomeVar) ")" "."  
+    Definicoes Processo "." {(Processo | ComposicaoParalela)"."}
+    
+        
+        (.  
+        
+        
+            objTrace = new LeituraTrace(System.getProperty("user.dir")+"/entrada.txt");
+            try{
+                // System.out.println("\n========================");
+                objTrace.lerTrace();
+                if(objTrace.getValor().isEmpty()){
+                    // System.out.println("TRACE VAZIO");
+                    // System.out.println("ABORTANDO EXECUCAO...");
+                    // System.exit(0);
+                }else{
+                    // System.out.println("TRACE OBTIDO DO ARQUIVO:\n" + objTrace.getValor() + "\n");
+                }
+            }catch(Exception e){
+                e.printStackTrace();
+            }
+
+	
+	        //private ArrayList<CondicaoOperacao> condicaoOperacao;	
+
+            // private ArrayList<Pares> procParam;
+            
+            //DEBUG
+            // if(dadosRepeticao.getLimiteInferior() != null){
+                // System.out.println("\n\nDados Repeticao:");
+                // System.out.println("Nome processo: " + dadosRepeticao.getNomeProcesso());
+                // System.out.println("indice: " + dadosRepeticao.getIndice());
+                // System.out.println("valor indice: " + dadosRepeticao.getValorIndice());
+
+                // System.out.println("ProcParam PRIM: " + dadosRepeticao.getProcParam().get(0).getPrim());
+                // System.out.println("ProcParam ULT: " + dadosRepeticao.getProcParam().get(0).getUlt());
+
+                // System.out.println("Lim Inferior: " + dadosRepeticao.getLimiteInferior());
+                // System.out.println("Lim Superior: " + dadosRepeticao.getLimiteSuperior());
+                // System.out.println("Nome acao: " + dadosRepeticao.getCondicaoOperacao().get(0).getNomeAcao() );
+                // System.out.println("Cond E: " + dadosRepeticao.getCondicaoOperacao().get(0).getCondicao().getOperandoE());
+                // System.out.println("Cond comp: " + dadosRepeticao.getCondicaoOperacao().get(0).getCondicao().getComparador());
+                // System.out.println("Cond D: " + dadosRepeticao.getCondicaoOperacao().get(0).getCondicao().getOperandoD());
+    
+                // System.out.println("OP E: " + dadosRepeticao.getCondicaoOperacao().get(0).getOperacao().getOperandoE());
+                // System.out.println("OP comp: " + dadosRepeticao.getCondicaoOperacao().get(0).getOperacao().getComparador());
+                // System.out.println("OP D: " + dadosRepeticao.getCondicaoOperacao().get(0).getOperacao().getOperandoD());
+    
+    
+                // System.out.println("prox processo: " + dadosRepeticao.getCondicaoOperacao().get(0).getProxProcesso() );
+
+
+                // System.out.println("Nome acao: " + dadosRepeticao.getCondicaoOperacao().get(1).getNomeAcao() );
+                // System.out.println("Cond E: " + dadosRepeticao.getCondicaoOperacao().get(1).getCondicao().getOperandoE());
+                // System.out.println("Cond comp: " + dadosRepeticao.getCondicaoOperacao().get(1).getCondicao().getComparador());
+                // System.out.println("Cond D: " + dadosRepeticao.getCondicaoOperacao().get(1).getCondicao().getOperandoD());
+    
+                // System.out.println("OP E: " + dadosRepeticao.getCondicaoOperacao().get(1).getOperacao().getOperandoE());
+                // System.out.println("OP comp: " + dadosRepeticao.getCondicaoOperacao().get(1).getOperacao().getComparador());
+                // System.out.println("OP D: " + dadosRepeticao.getCondicaoOperacao().get(1).getOperacao().getOperandoD());
+    
+    
+                // System.out.println("prox processo: " + dadosRepeticao.getCondicaoOperacao().get(1).getProxProcesso() );
+
+            
+
+            // }
+        .)
+    
+        //=========================================
+            //Escrevendo no disco
+            //Escrita de cada classe/processo
+        //=========================================
+        (.
+            // System.out.println("\n======================");
+            // System.out.println("BEGIN: Array de dados");
+            // objUtilitarios.imprimirArrayProcessos(arrayProcessos);
+            // System.out.println("\nEND: Array de dados");
+            // System.out.println("=======================");
+
+
+            // arrayProcessos = objUtilitarios.acaoRelabelling(arrayProcessos, relabelling);
+            // System.out.println("\nRelabelling...\n");
+            // System.out.println("\n======================");
+            // System.out.println("BEGIN: Array de dados");
+            // objUtilitarios.imprimirArrayProcessos(arrayProcessos);
+            // System.out.println("\nEND: Array de dados");
+            // System.out.println("=======================");
+
+
+            
+            // for(int i = 0; i < relabelling.size(); i++){
+            //     System.out.println(relabelling.get(i).getNovoRotulo() + ", " + relabelling.get(i).getRotuloAntigo());
+            // }
+
+            //Limpar os dados no diretorio Saida para que novos arquivos sejam escritos
+            Arrays.stream(new File(System.getProperty("user.dir") + "/Saida/").listFiles()).forEach(File::delete);
+            
+            /*Loop para acessar cada processo (cada processo pode ter subprocesso)*/
+            /*size - 1 pois a última posição são os processos paralelos */ 
+            // System.out.println("ENTRADAS: " + arrayProcessos.size());
+            // objUtilitarios.imprimirArrayProcessos(arrayProcessos);
+            for(int x = 0; x < arrayProcessos.size(); x++){
+
+                /*Variável Local*/
+                ArrayList<Nupla> arrayNupla = arrayProcessos.get(x);
+                for(int i = 0; i < arrayNupla.size(); i++){
+                    if(i == arrayNupla.size() - 1){
+                        //Para que o ultimo metodo nao crie uma instancia do metodo chamador que desencadeou a sequencia de acoes
+                        //em caso de loop a repeticao se da pelo while(true)
+                        ultimoMetodo = true;
+                    }
+    
+                    //Possivel problema em passar o nome da classe variando
+                    
+
+                    if(!arrayNupla.get(i).getValor().isEmpty()){
+                        // System.out.println("\nCHAMADA - Valor: " + arrayNupla.get(i).getValor() );
+                        
+                        objUtilitarios.escreverNoDiscov2(reformatClassName(arrayNupla.get(i).getChave()), reformatClassName(arrayNupla.get(i).getObj())
+                        ,arrayNupla.get(i).getValor(), arrayNupla, ultimoMetodo, flagLoop, i, dicionario, dadosRepeticao);
+
+                        
+                        /*Variáveis para manipular o dicionário*/
+                        String chave = arrayNupla.get(i).getChave();
+                        ArrayList<String> arrayTmp = arrayNupla.get(i).getValor();
+
+                        /*O dicionário só pode conter ações únicas*/
+                        if(dicionario.containsKey(arrayNupla.get(i).getChave())){
+                            for(int j = 0; j < arrayTmp.size(); j++){                                            
+                                if(!dicionario.get(chave).contains(arrayTmp.get(j))){
+                                    dicionario.get(chave).add(arrayTmp.get(j));    
+                                }
+                            }                        
+                        /*Caso não haja no dicionário, insira todo o array a o nome da classe/processo*/
+                        }else{  
+                            dicionario.put(chave, new ArrayList<String>(arrayTmp));
+                        }                      
+                    }
+                }
+            }
+            // objUtilitarios.imprimirArrayProcessos(arrayProcessos);
+
+            // System.out.println("dicionario");
+            // for(String chave : dicionario.keySet()){
+            //     System.out.print(chave + ": ");
+            //     ArrayList<String> valor = dicionario.get(chave);
+            //     System.out.println(valor);
+            // }
+
+            // System.out.println("dicionarioAtributo");
+            // for(String chave : dicionarioAtributos.keySet()){
+            //     System.out.print(chave + ": ");
+            //     ArrayList<String> valor = dicionarioAtributos.get(chave);
+            //     System.out.println(valor);
+            // }
+            
+
+
+
+
+            //Escrita da classe principal
+            alfabetoParalelo = objUtilitarios.escreverClassePrincipalv3(arrayProcessos, composicaoParalelaData, alfabetoParalelo,
+                            arrayDadosLoop, dicionario, objTrace.getValor(), traceTmp);
+
+        .)
+        //=========================================
+    
+    
+    . /*CallParentesis ".".*/
+     
+    /*DEBUG: CallParentesis ".".*/
+    
+    Definicoes      =  Const Definicoes | Range Definicoes | . 
+    //TODO --> Pensar em qual classe ficara! Na primeira (e essa chama os outros processos?) do FSP junto com thread?
+    
+    Const           =  "const"
+                       nomeVar
+                       "="     
+                       numero  
+                       .
+    
+    Range           =  "range" 
+                       nomeVar
+                       "="      
+                       (nomeVar | numero) Intervalo
+                       .
+       
+    Intervalo       =  
+                            
+                       ".." 
+                       ( 
+                           (
+                               nomeVar (. dadosRepeticao.setLimiteSuperior(t.val); .)                               
+                               | 
+                               nomeMin //TODO --> verificar a necessidade                                
+                               |
+                               numero                               
+                               //Para intervalo em uma definicao de processo, só pode constante
+                            ) 
+
+                            (
+                                Operacao 
+                                (
+                                    nomeVar                                    
+                                    |
+                                    nomeMin  //TODO --> verificar a necessidade                                    
+                                    | 
+                                    numero  
+                                )
+
+                                |
+                                //Lambda 
+                            ) 
+                        )
+                        .
+  
+    Operacao        =  "+" | "-" | "*" | "/".       
+    IgualdadeDesig  =  "==" | ">" | "<" | ">=" | "<=" | "!=".
+    
+    Processo 
+        (.         
+            nomeClasse = ""; String stringProcToObj = ""; 
+            
+                   
+        .) 
+
+        =  
+        Regra<out nomeClasse> 
+            "=" 
+            ( 
+                "(" 
+                    Transicao<out stringProcToObj>
+                ")" 
+                | 
+                nomeVar 
+            
+                (.
+                    //Se nao ha uma transicao do tipo acao->Processo ,entao
+                    //ha um processo que pode ser STOP ou outro qualquer
+                    if((t.val).equals("STOP")){
+
+
+                        //Teste repeticao
+                    // nomeAcao.add("_init_");
+                    // EscolhaCaminho objCaminho = new EscolhaCaminho(nomeClasse, nomeAcao, stringProcToObj);
+                    // arrayCaminho = new ArrayList<EscolhaCaminho>();
+                    // arrayCaminho.add(objCaminho);
+                    // objCaminho = null; 
+                    // nomeAcao = null;
+
+                    // DadosExecucao objDados = new DadosExecucao(nomeClasse, arrayCaminho, "null");            
+                    // dados.add(objDados);
+
+                    // objDados = null;  
+                    // arrayCaminho = null;
+
+
+
+                        /*if(objTrace.getValor().get(0).equals(t.val)){
+                            System.out.println("\n--------------");
+                                System.out.println("|TRACE ACEITO|");
+                                System.out.println("--------------");
+                        }*/
+                        //Se t.val == STOP, cria-se um metodo/acao fake para fins de nao quebrar o codigo
+                        //"insere um metodo fake para nao ter um array vazio e gerar exception"
+                        nomeMetodos.add("_stop_"); objUtilitarios.addToArrayEscolha(t.val, nomeMetodos, arrayLista); 
+                    }else{
+                        //TODO ---> tratar  o caso do trace qnd tive _init_
+                        //Se nao for STOP, criar-se um metodo/acao fake para dar arranque
+                        //"insere um metodo fake para nao ter um array vazio e gerar exception"
+                        nomeMetodos.add("_init_"); objUtilitarios.addToArrayEscolha(t.val, nomeMetodos, arrayLista);
+                    } 
+                .)
+                 
+                Indice
+            )
+            
+            (.   
+                //arrayLista<ArrayLista> contem (metodos e o obj a ser instanciado) para nao perder os dados ao entrar no Subprocesso
+                
+                //Se nao houver when, eh requisitado ao usuario a escolha de um caminho entre as alternativas
+                int escolhaToInt = 0;
+                /*if(flagAcaoGuarda == false && indexTrace < objTrace.getValor().size()){*/
+                if(flagAcaoGuarda == false){                            
+                    //Leitura do teclado se  arrayLista > 1, ou seja, há OUs.
+                    //Retorna 0 se tamanho == 1 e 1..Size se tamanho > 1   
+                    
+                    escolhaToInt = objUtilitarios.inputEscolha(arrayLista); 
+                    //TODO ---> Melhorar no caso do "when"
+
+                    // ArrayList<String> auxTrace = new ArrayList<String>();
+                    // objUtilitarios.teste(arrayLista, 0, nomeClasse, auxTrace);
+                    // System.out.println("Aux trace: " + auxTrace);
+                    Escolhas tmp = new Escolhas();
+
+                    tmp.chave = nomeClasse;
+                    tmp.arrayLista.addAll(arrayLista);
+                    escolhas.add(tmp);
+                    // System.out.println(escolhas.get(0).chave);
+                    // objTrace.getValor().addAll(auxTrace);
+                    // System.exit(0);
+                    
+
+                    objUtilitarios.addClasseMetodos(reformatClassName(nomeClasse), reformatClassName(arrayLista.get(escolhaToInt).getChave()), arrayLista.get(escolhaToInt).getValor(), nomeClassesMetodos);
+                                                    
+                }else{
+                    //REVER:
+                    //Se ha uma acao de guarda, os metodos quando ocorre when precisam ser gravados sem encadeamento
+                    arrayMetodoLoop = new ArrayList<String>();
+                    //TODO ---> melhorar, pois os metodos ficaram em dois arrays (arrayMetodoLoop e nomeClassesMetodos) e somente na escrita que se remove de um
+                    //e faz-se a distincao se o metodo pertence ao loop. Eh caro, melhorar o custo.
+                    
+                    // System.out.println("\nVERIFY>>>" );
+                    for(int i = 0; i < arrayLista.size(); i++){
+                        for(int j = 0; j < arrayLista.get(i).getValor().size(); j++){
+                            // System.out.println("\nVERIFY: " + arrayLista.get(i).getValor().get(j) );
+                            arrayMetodoLoop.add(arrayLista.get(i).getValor().get(j));
+                        }
+                    }
+                                        
+                    //TODO ---> Melhorar a forma como se obtem objetos/Processos nessa forma especifica de "when"
+                    objUtilitarios.addClasseMetodos(reformatClassName(nomeClasse), reformatClassName(arrayLista.get(0).getChave()), arrayLista.get(0).getValor(), nomeClassesMetodos);                                
+                }                     
+
+                //Array com o nome da classe, seus metodos e obj - Contem tudo do processo atual! 
+                // addClasseMetodos(IN: String nomeClasse, IN:  String nomeObj, IN: ArrayList<String> arrayMetodos, OUT: ArrayList<Nupla> nomeMetodoClasse)
+
+                //Limpando o array de metodos
+                nomeMetodos.clear();
+                
+                //ArrayNupla global que recebe todos os dados de um processo
+                ArrayList<ArrayLista> arrayListaTmp = new ArrayList<ArrayLista>(); 
+                arrayListaTmp.add(arrayLista.get(escolhaToInt));
+                objUtilitarios.addClasseMetodosObjts(reformatClassName(nomeClasse), arrayLista, arrayNupla); 
+                // dadosExecucao = new DadosExecucao();
+                // dadosExecucao.setNomeProcesso(reformatClassName(nomeClasse));
+                // dadosExecucao.
+                //Limpando o array para a chamada do Escolha pela Transicao dentro do Subprocesso
+                arrayLista = new ArrayList<ArrayLista>();               
+                
+            .)
+            
+
+        Subprocesso<out nomeClasse>  
+        
+        (.
+            arrayProcessos.add(arrayNupla);
+            arrayNupla = new ArrayList<Nupla>();
+
+            //Caso não haja loop no formato [i:0..N]            
+            if(dadosRepeticao.getIndice() == null){
+                // System.out.println("\n<<<TESTE>>>\n");
+                objUtilitarios.teste(escolhas.get(0).arrayLista, 0, escolhas.get(0).chave, traceTmp, escolhas);                
+            }else{
+                // System.out.println("Chamada do loop");
+                objUtilitarios.teste2(arrayProcessos, 0, dadosRepeticao, traceTmp);
+
+            }
+        .)
+        
+        
+        ActionHiding
+
+        .
+    
+    Regra<out String nomeClasse>           
+                                =  
+                                nomeVar (. nomeClasse = t.val; .)
+                                // (NomeInicioMai | )                                                     
+                                ( 
+                                    // "(" 
+                                    //     nomeVar  //Todo -> capturar o process parameter pra o java, na tipo II tambem
+                                    //     "="     
+                                    //     numero  
+                                    // ")"
+                                    ProcParametro
+                                    |
+                                    Indice
+                                    //Arrumar o indice
+                                )                                
+                                .
+    RegraTipoII<out String nomeClasse> //Nao tem process parameter - Verificado no LSTA
+                                =   
+                                    nomeVar 
+                                    (. 
+                                        nomeClasse = t.val;
+
+
+                                        dadosRepeticao.setNomeProcesso(t.val);
+                                    .)
+                                    // (NomeInicioMai | )                                                                 
+                                    ( 
+                                        // "(" 
+                                        // nomeVar  //Todo ---> capturar o process parameter pra o java?
+                                        // "="     
+                                        // numero  
+                                        // ")"
+                                        // ProcParametro  TODO ---> precisa colocar???
+                                        // |
+                                        Indice //Gera lambda
+                                        //Arrumar o indice
+                                    )
+                                    .   
+     
+    Transicao<out String stringProcToObj>
+                    (. stringProcToObj = ""; .)
+                    
+                    =  AcaoDeGuarda 
+                        ( 
+                            (
+                                (
+                                    (   
+                                        (.
+                                            String auxiliarNomeMetodo = "";.)
+                                            nomeMin (. auxiliarNomeMetodo += t.val;
+                                        .)   
+                                       
+                                        [
+                                            "." (. auxiliarNomeMetodo += t.val; .)
+                                            nomeMin (. auxiliarNomeMetodo += t.val; .)                                                                                    
+                                        ]
+
+                                        (. nomeMetodos.add(auxiliarNomeMetodo); 
+                                        
+                                            if(dadosRepeticao != null){
+                                                if(dadosRepeticao.getIndice() != null){
+                                                    condicaoOperacao.setNomeAcao(auxiliarNomeMetodo);
+                                                }
+                                            }
+                                        .)
+                                        
+                                        |
+                                        "[" (numero | nomeMin |nomeVar) "]"
+                                        //TODO ---> COLOCAR no ARRAY
+                                        
+                                    )                             
+                                    Indice //TODO -->
+                                )
+
+                                |
+
+                                AlfabetoExt
+                                
+                                (. 
+                                    //a acao é acrescentada ao array nomeMetodos pela funcao escolhaOptAlfabeto
+                                    stringNomeAcao = objUtilitarios.escolhaOptAlfabeto(arrayAlfabeto, nomeMetodos);
+                                .)
+                                                            
+                                //TODO ---> Talvez passar parâmetro em vez de tudo global
+                                //O método é escrito no array pelo esocolhaOptAlfabeto 
+                                //TODO ---> Arrumar para ser compativel com o arrayEscolha
+                            )
+                        ) 
+                        "->"
+                        RepeteAcao
+                        //Mudar OptALfabeto a ser escolhido durante a leitura do user para definir os OUs                               
+                        (
+                            ParentesisFatora
+                            /*O nomeProcessoFatora é obtido de ParentesisFatora */
+                            (. objUtilitarios.addToArrayEscolha(nomeProcessoFatora, nomeMetodos, arrayLista); .)
+                            // FatoraProcesso //TODO -->
+                            | 
+                            
+                            //Obtendo o nome do Processo apos acao para instanciar um objeto via  Java
+                            nomeVar                             
+                            (. 
+                                //Apos todos os metodos dessa regra serem obtidos, grave-se no arrayLista junto com
+                                //o nome do proximo processo.                                    
+                                stringProcToObj = t.val;
+                                objUtilitarios.addToArrayEscolha(stringProcToObj, nomeMetodos, arrayLista);
+
+
+                                if(dadosRepeticao != null){
+                                    if(dadosRepeticao.getIndice() != null){
+                                        condicaoOperacao.setProxProcesso(t.val);
+                                    }
+                                }
+
+                            .)
+                            
+                            Indice //---> TODO
+                                                        
+                            (.
+                                
+                                if(dadosRepeticao != null){
+                                    if(operacao != null){
+                                        condicaoOperacao.setOperacao(operacao);
+                                        dadosRepeticao.getCondicaoOperacao().add(condicaoOperacao);
+                                    }
+                                }
+                            
+                            
+                            
+                                dadosLoop.setCondicaoVal(stringRun);
+                                
+                                //Para armazenar os dados do obj DadosLoop é preciso instanciar um novo objeto uma vez que o obj antigo sera limpo
+                                //Copia
+
+                                //Contem condicao, indice, process parameter, novo indice ...
+                                
+                                
+                                DadosLoop dadosAux = new DadosLoop();
+                                dadosAux.setOrdemIntervalo(dadosLoop.getOrdemIntervalo());
+                                dadosAux.setIndiceVal(dadosLoop.getIndiceVal());
+                                dadosAux.setCondicaoVal(new String(dadosLoop.getCondicaoVal()));
+                                dadosAux.setNovoIndice(new String(dadosLoop.getNovoIndice()));
+
+                                //acrescenta-se ao array com dados de cada subprocesso
+                                arrayDadosLoop.add(dadosAux);
+                                
+                                //Limpando a string
+                                stringRun = "";
+                                //Limpando o conteudo do obj
+                                dadosLoop.clear();
+                                //TODO ---> Replicar para a repetição do escolha
+                            .)
+                            
+                        )
+                        /*
+                        (. 
+                            //Se a flag for true e o array todo vai percorrido, o caminho eh valido
+                            if(flagTraceContinue == true && indexTrace < objTrace.getValor().size()){
+                                // System.out.println("\n--------------");
+                                // System.out.println("|TRACE ACEITO??|");
+                                // System.out.println("--------------");
+                                System.out.println("\nBUSCANDO OUTRO CAMINHO...\n");
+                            }
+
+                            // }else{
+                            //     //Tenta na regra Escolha se nao gerar Lambda ou continua a verificacao no Subprocesso
+                            // }
+
+                            if(flagTraceContinue == true){
+                                if(indexTrace < objTrace.getValor().size()){                                    
+                                    System.out.println("CONTINUANDO O TRACE EM UM SUBPROCESSO, INDICE ATUAL:  " + indexTrace + "\n");
+                                    indexTraceSub = indexTrace;
+                                }
+                            }
+                        .)
+                        */
+                        Escolha
+                        .
+    
+    RepeteAcao      =  
+                    (
+                        (
+                            (
+                                (.String auxiliarNomeMetodo = "";.)
+
+                                nomeMin (. auxiliarNomeMetodo += t.val; .)
+                                
+                                (.     
+                                 //TODO ---> Temporario, enquanto a repeticao de metodos com o mesmo nome nao eh solucionada. Ex: Trafficlight
+                                 
+                                
+                                /*                                                           
+                                    if(flagTraceContinue == true && (indexTrace < objTrace.getValor().size())  ){
+                                        if( (indexTrace < objTrace.getValor().size())  && (objTrace.getValor().get(indexTrace).equals(t.val))){
+                                            indexTrace++;
+                                            
+                                            //TODO ---> Temporario, enquanto a repeticao de metodos com o mesmo nome nao eh solucionada. Ex: Trafficlight
+                                            if(!nomeMetodos.contains(t.val)){
+                                                nomeMetodos.add(t.val);
+                                            }else{
+                                                nomeMetodos.add(t.val + "_" + metodoRepetido);
+                                                metodoRepetido++;
+                                            }
+                                            
+                                            System.out.println("VALOR ATINGIDO: " + t.val);
+                                        }else{                                        
+                                            nomeMetodos.clear();
+                                            flagTraceContinue = false;
+                                            // System.out.println("TRACE REJEITADO");
+                                            System.out.println("\nVALOR OBTIDO: " + objTrace.getValor().get(indexTrace));
+                                            System.out.println("VALOR ESPERADO: " + t.val + "\n");
+
+                                        }
+                                    }  */                              
+                                .)
+                                
+                                // (NomeInicioMin | )
+                                [
+                                    "." (. auxiliarNomeMetodo += t.val; .) 
+                                    nomeMin (. auxiliarNomeMetodo += t.val; .)
+                                ]
+
+                                (.
+                                    if(!nomeMetodos.contains(auxiliarNomeMetodo)){
+                                        nomeMetodos.add(auxiliarNomeMetodo);
+                                    }else{
+                                        nomeMetodos.add(auxiliarNomeMetodo + "$" + metodoRepetido);
+                                        metodoRepetido++;
+                                    }
+                                .)
+
+                                |
+                                "[" (numero | nomeMin | nomeVar) "]"
+                            )
+                            Indice //TODO -->
+
+                            |
+
+                            AlfabetoExt
+                            
+                            (.                                
+                                String tmpVal = objUtilitarios.escolhaOptAlfabeto(arrayAlfabeto, nomeMetodos);
+                                // TODO ---> colocar essa verificao nessa funcao para evitar acao repetida, nao precisa do add nessa linha pq a funcao ja add o metodo ao array
+                                // if(!nomeMetodos.contains(tmpVal)){           
+                                //     nomeMetodos.add(tmpVal);
+                                // }else{
+                                //     nomeMetodos.add(tmpVal + "_" + metodoRepetido);
+                                //     metodoRepetido++;
+                                // }
+                                //TODO ---> Evitar add o metodo repetido, fazer a checagem o o if acima. SE for preciso, alterar a funcao escolhaoptalfabeto
+
+
+
+                                
+                                /*if(flagTraceContinue == true && (indexTrace < objTrace.getValor().size()) ){
+                                    String saidaCheckTrace = objUtilitarios.alfabetoCheckTrace(arrayAlfabeto, objTrace.getValor().get(indexTrace), 0);
+                                    if(!saidaCheckTrace.equals("")){
+                                        indexTrace++;
+                                        
+                                        if(!nomeMetodos.contains(saidaCheckTrace)){           
+                                            nomeMetodos.add(saidaCheckTrace);
+                                        }else{
+                                            nomeMetodos.add(saidaCheckTrace + "_" + metodoRepetido);
+                                            metodoRepetido++;
+                                        }
+                                        arrayAlfabeto.clear();
+                                        System.out.println("VALOR ATINGIDO: " + saidaCheckTrace);
+                                    }else{
+                                        System.out.println("VALOR OBTIDO: " + objTrace.getValor().get(indexTrace));
+                                        System.out.println("VALOR ESPERADO: " + arrayAlfabeto + "\n");
+                                        flagTraceContinue = false;                                    
+                                        nomeMetodos.clear();
+                                        arrayAlfabeto.clear();
+                                    }                                    
+                                }else{
+                                    flagTraceContinue = false;   
+                                    System.out.println("\t  VALOR OBTIDO: null");
+                                    System.out.println("\tVALOR ESPERADO: " + arrayAlfabeto + "\n");                                 
+                                    nomeMetodos.clear();
+                                    arrayAlfabeto.clear();                                   
+                                    // System.out.println("TRACE REJEITADO");
+                                    // System.out.println("VALOR ESPERADO: " + objTrace.getValor().get(indexTrace));
+                                } */                               
+                                
+                            .)
+                            
+                            //O resultado escolhido eh adicionado ao vetor nomeMetodos pela funcao escolhaOptAlfabeto
+                        )
+                        "->"
+                        //Loop
+                        {
+                            (
+                                (
+                                    (.String auxiliarNomeMetodo = "";.)
+                                    nomeMin (.auxiliarNomeMetodo += t.val;.)
+                                    
+                                    (. 
+
+                                    
+
+                                        //TODO ---> Temporario, enquanto a repeticao de metodos com o mesmo nome nao eh solucionada. Ex: Trafficlight
+                                                                            
+                                       /* if(flagTraceContinue == true){
+                                            if((indexTrace < objTrace.getValor().size()) && objTrace.getValor().get(indexTrace).equals(t.val)){
+                                                indexTrace++;
+                                                
+                                                if(!nomeMetodos.contains(t.val)){
+                                                    nomeMetodos.add(t.val);
+                                                }else{
+                                                    nomeMetodos.add(t.val + "_" + metodoRepetido);
+                                                    metodoRepetido++;
+                                                }
+                                                
+                                                System.out.println("VALOR ATINGIDO: " + t.val);
+                                            }else{
+                                                flagTraceContinue = false;
+                                                nomeMetodos.clear();
+                                                // System.out.println("TRACE REJEITADO");
+                                                // System.out.println("VALOR ESPERADO: " + objTrace.getValor().get(indexTrace));
+                                            }
+                                        } */
+                                        
+                                    .)
+                                    
+                                    // (NomeInicioMin | )
+                                    [                                        
+                                        "." (.auxiliarNomeMetodo+=t.val;.)
+                                        nomeMin (.auxiliarNomeMetodo+= t.val; .)
+                                    ]
+                                    (.
+                                        if(!nomeMetodos.contains(auxiliarNomeMetodo)){
+                                            nomeMetodos.add(auxiliarNomeMetodo);
+                                        }else{
+                                            nomeMetodos.add(auxiliarNomeMetodo + "$" + metodoRepetido);
+                                            metodoRepetido++;
+                                        }
+
+                                    .)
+                                    |
+                                    "[" (numero | nomeMin |nomeVar) "]"
+                                )
+                                Indice //TODO -->
+                                |
+                                AlfabetoExt  
+                                
+                                (.                                    
+                                    //O resultado escolhido eh adicionado ao vetor nomeMetodos pela funcao escolhaOptAlfabeto                                    
+                                    /*if(flagTraceContinue == true && (indexTrace < objTrace.getValor().size()) ){
+                                        String saidaCheckTrace = objUtilitarios.alfabetoCheckTrace(arrayAlfabeto, objTrace.getValor().get(indexTrace), 0);
+                                        if(!saidaCheckTrace.equals("")){
+                                            indexTrace++;
+
+                                            // TODO ---> colocar essa verificao nessa funcao para evitar acao repetida, nao precisa do add nessa linha pq a funcao ja add o metodo ao array
+                                            if(!nomeMetodos.contains(saidaCheckTrace)){
+                                                nomeMetodos.add(saidaCheckTrace);
+                                            }else{
+                                                nomeMetodos.add(saidaCheckTrace + "_" + metodoRepetido);
+                                                metodoRepetido++;
+                                            }
+                                            System.out.println("VALOR ATINGIDO: " + saidaCheckTrace);
+                                        }else{
+                                            System.out.println("VALOR OBTIDO:   " + objTrace.getValor().get(indexTrace));
+                                            System.out.println("VALOR ESPERADO:   " + arrayAlfabeto);
+                                            flagTraceContinue = false;
+                                            nomeMetodos.clear();
+                                            arrayAlfabeto.clear();
+                                        }                                    
+                                    }else{
+                                        flagTraceContinue = false;
+                                        nomeMetodos.clear();
+                                        arrayAlfabeto.clear();                                    
+                                        // System.out.println("TRACE REJEITADO>>");
+                                        // System.out.println("VALOR ESPERADO: " + objTrace.getValor().get(indexTrace));
+                                    }*/
+                                    
+                                     // TODO --> evitar a pergunta, fazer via trace
+                                     String tmpVal = objUtilitarios.escolhaOptAlfabeto(arrayAlfabeto, nomeMetodos);
+
+
+
+
+                                    //TODO ---> Evitar add o metodo repetido, fazer a checagem o o if acima. SE for preciso, alterar a funcao escolhaoptalfabeto
+
+
+
+
+                                .)
+                                
+                            )
+                            "->"
+                        }
+                    )
+                    |
+                    .
+                    //Troquei a recursao por loop {} e add o "|" para gerar vazio
+                    // RepeteAcao<out nomeMetodos>                     
+                    // |
+
+                    
+    RepeteAcaoEscolha<. ArrayList<String> arrayEscolha .>     
+                    =  
+                    (
+                        (
+                            (
+                                (.String auxiliarNomeMetodo = "";.)
+                                nomeMin (. auxiliarNomeMetodo += t.val; .)
+                                
+                                (.
+                                     //TODO ---> melhorar
+                                                                      
+                                    
+                                    /*if(flagTraceEscolha == true && (indexTrace < objTrace.getValor().size())){
+                                        if(objTrace.getValor().get(indexTrace).equals(t.val)){
+                                            indexTrace++;     
+                                            System.out.println("VALOR ATINGIDO: " + t.val);
+                                    
+                                            //TODO ---> melhorar
+                                            if(!arrayEscolha.contains(t.val)){
+                                                arrayEscolha.add(t.val);
+                                            }else{
+                                                arrayEscolha.add(t.val + "_" + metodoRepetido);
+                                                metodoRepetido++;
+                                            }
+
+                                        }else{
+                                            flagTraceEscolha = false;
+                                            arrayEscolha.clear();
+                                            // System.out.println("TRACE REJEITADO");
+                                            System.out.println("VALOR OBTIDO: " + objTrace.getValor().get(indexTrace));
+                                            System.out.println("VALOR ESPERADO: " + t.val);
+                                        }
+                                    }else if(flagTraceEscolha == true){
+                                        if(indexTrace == objTrace.getValor().size()){
+                                            System.out.println("\nTRACE INVALIDO");
+                                            System.out.println("ABORTANDO EXECUCAO...");
+                                            System.exit(0);
+                                        }
+                                        
+                                    }*/
+
+                                    
+                                
+                                .)
+                                
+                                // (NomeInicioMin | )
+                                [
+                                    
+                                    "." (.auxiliarNomeMetodo += t.val;.)
+                                    nomeMin (.auxiliarNomeMetodo+= t.val;.)
+                                ]
+                                (.
+                                    if(!arrayEscolha.contains(auxiliarNomeMetodo)){
+                                        arrayEscolha.add(auxiliarNomeMetodo);
+                                    }else{
+                                        arrayEscolha.add(auxiliarNomeMetodo + "$" + metodoRepetido);
+                                        metodoRepetido++;
+                                    }
+                                .)
+                                
+                                |
+
+                                "[" ( numero | nomeVar) "]"
+                            )
+                            Indice //TODO -->
+                            |
+                            //Arrumar
+                            AlfabetoExt     
+                            
+                            (.                                           
+                                /*if(flagTraceEscolha == true && (indexTrace < objTrace.getValor().size()) ){
+                                    String saidaCheckTrace = objUtilitarios.alfabetoCheckTrace(arrayAlfabeto, objTrace.getValor().get(indexTrace), 0);
+                                    if(!saidaCheckTrace.equals("")){
+                                        indexTrace++;
+                                        
+                                        if(!arrayEscolha.contains(saidaCheckTrace)){
+                                            arrayEscolha.add(saidaCheckTrace);
+                                        }else{
+                                            arrayEscolha.add(saidaCheckTrace + "_" + metodoRepetido);
+                                            metodoRepetido++;
+                                        }
+
+                                        System.out.println("VALOR ATINGIDO: " + saidaCheckTrace);
+                                    }else{
+                                    flagTraceEscolha = false;
+                                    // System.out.println("TRACE REJEITADO");
+                                    System.out.println("VALOR OBTIDO: " + objTrace.getValor().get(indexTrace));
+                                    System.out.println("VALOR ESPERADO: " + arrayAlfabeto);
+                                    arrayEscolha.clear();
+                                    arrayAlfabeto.clear();                                    
+                                    }
+                                }else if(flagTraceEscolha == true){
+                                    if(indexTrace == objTrace.getValor().size()){
+                                        System.out.println("\nTRACE INVALIDO");
+                                        System.out.println("ABORTANDO EXECUCAO...");
+                                        arrayAlfabeto.clear();
+                                        System.exit(0);
+                                    }
+                                }*/
+
+                                String tmpVal = objUtilitarios.escolhaOptAlfabeto(arrayAlfabeto, nomeMetodos); arrayEscolha.add(tmpVal);
+                                //TODO ---> Evitar add o metodo repetido, fazer a checagem o o if acima. SE for preciso, alterar a funcao escolhaoptalfabeto
+
+
+
+
+
+
+                            .) 
+                                  
+                        )
+                        "->"
+                        //Loop
+                        {
+                            (
+                                (
+                                    (.String auxiliarNomeMetodo = "";.)
+                                    nomeMin (. auxiliarNomeMetodo += t.val; .)
+                                    
+                                    (.
+                                                                        
+                                        
+                                        /*if(flagTraceEscolha == true && indexTrace < objTrace.getValor().size()){
+                                            if(objTrace.getValor().get(indexTrace).equals(t.val)){
+                                                // objTrace.getValor().remove(t.val);
+                                                indexTrace++;
+                                                System.out.println("VALOR ATINGIDO: " + t.val);
+
+                                                if(!arrayEscolha.contains(t.val)){
+                                                    arrayEscolha.add(t.val);
+                                                }else{
+                                                    arrayEscolha.add(t.val + "_" + metodoRepetido);
+                                                    metodoRepetido++;
+                                                }
+
+                                            }else{
+                                                flagTraceContinue = false;
+                                                arrayEscolha.clear();
+                                                // System.out.println("TRACE REJEITADO");
+                                                System.out.println("VALOR OBTIDO:   " + objTrace.getValor().get(indexTrace));
+                                                System.out.println("VALOR ESPERADO: " + t.val);
+                                            }
+                                        }else if(flagTraceEscolha == true){
+                                            if(indexTrace == objTrace.getValor().size()){
+                                                System.out.println("\nTRACE INVALIDO");
+                                                System.out.println("ABORTANDO EXECUCAO...");
+                                                arrayAlfabeto.clear();
+                                                System.exit(0);
+                                            }
+                                        }*/
+                                    
+                                    .) 
+                                    
+                                    // (NomeInicioMin | )
+                                    [ 
+                                        "." (.auxiliarNomeMetodo += t.val;.)
+                                        nomeMin (.auxiliarNomeMetodo += t.val;.)
+                                    ]
+                                    (.
+                                        if(!arrayEscolha.contains(auxiliarNomeMetodo)){
+                                            arrayEscolha.add(auxiliarNomeMetodo);
+                                        }else{
+                                            arrayEscolha.add(auxiliarNomeMetodo + "$" + metodoRepetido);
+                                            metodoRepetido++;
+                                        }
+                                    .)
+                                    |
+                                    "[" (numero | nomeMin |nomeVar) "]"
+                                )
+                                Indice //TODO -->
+                                |
+                                AlfabetoExt  
+                                
+                                (. 
+                                    /*if(flagTraceEscolha == true && indexTrace < objTrace.getValor().size()){
+                                        String saidaCheckTrace = objUtilitarios.alfabetoCheckTrace(arrayAlfabeto, objTrace.getValor().get(indexTrace), 0);
+                                        if(!saidaCheckTrace.equals("")){
+                                            indexTrace++;
+
+                                            if(!arrayEscolha.contains(saidaCheckTrace)){
+                                                arrayEscolha.add(saidaCheckTrace);
+                                            }else{
+                                                arrayEscolha.add(saidaCheckTrace + "_" + metodoRepetido);
+                                                metodoRepetido++;
+                                            }
+                                        }else{
+                                        flagTraceEscolha = false;
+                                        // System.out.println("TRACE REJEITADO");
+                                        System.out.println("VALOR OBTIDO: " + objTrace.getValor().get(indexTrace));
+                                        System.out.println("VALOR ESPERADO: " + arrayAlfabeto);
+                                        arrayEscolha.clear();
+                                        arrayAlfabeto.clear();                                    
+                                        }
+                                    }else if(flagTraceEscolha == true){
+                                        if(indexTrace == objTrace.getValor().size()){
+                                            System.out.println("\nTRACE INVALIDO");
+                                            System.out.println("ABORTANDO EXECUCAO...");
+                                            arrayAlfabeto.clear();
+                                            System.exit(0);
+                                        }
+                                    }*/
+
+                                    String tmpVal = objUtilitarios.escolhaOptAlfabeto(arrayAlfabeto, nomeMetodos); arrayEscolha.add(tmpVal); 
+                                    //TODO ---> Evitar add o metodo repetido, fazer a checagem o o if acima. SE for preciso, alterar a funcao escolhaoptalfabeto
+
+                                    
+                                    
+                                .)
+                                
+                            )
+                            "->"
+                        }
+                    )
+                    |
+                    .
+                    //Troquei a recursao por loop {} e add o "|" para gerar vazio
+                    // RepeteAcao<out nomeMetodos>                     
+                    // |                        
+    
+    Indice          =  "[" (IndiceTipoI | IndiceTipoII) "]" Indice |.//Lambda 
+    
+    //Ocorre em um processo/acao acionado por uma acao
+    //Ex: [2], [2*i], [2*J], [N*2], [N*i], [N] 
+    IndiceTipoI     =  
+                    (
+                        numero  (. processoIndexadoProducao += t.val;  .)
+                        | 
+                        nomeVar (. processoIndexadoProducao += t.val; .)
+                        // | 
+                        // numero   (. processoIndexadoProducao += t.val; .)
+                    ) 
+                    ( 
+                        (
+                            Operacao
+                            (
+                                numero
+                                | 
+                                nomeMin 
+                                | 
+                                nomeVar
+                            )
+                        )
+                        |
+                    )
+                    . //TODO -->
+    
+    //Ex: [i:0..N], [i:S], [i*2], [i]
+    IndiceTipoII    =  nomeMin 
+                        (.
+                            dadosLoop = new DadosLoop(); 
+                            dadosLoop.setOrdemIntervalo(processoIndexadoProducao); //TODO ---> se 0 começa de 0 se N começa de N
+                            dadosLoop.setIndiceVal(t.val);//TODO ---> Arruamr um jeito de saber qnd a variavel recebe a constante em numero ou N        
+                            dadosLoop.setNovoIndice(dadosLoop.getNovoIndice() + t.val );
+                            
+                            
+                            //Novo
+                            if(dadosRepeticao.getIndice() == null){
+                                dadosRepeticao.setIndice(t.val);
+                                // dadosRepeticao.setValorIndice(processoIndexadoProducao);
+                            }else{
+                                operacao = new Condicao();
+                                operacao.setOperandoE(t.val);
+                            }
+                            
+
+                        .)
+                        (
+                                /*Pode vir ':' seguido de nomeVAr Intervalo. Ex: [i:Top...Bottom]
+                                           ':' seguido de numero Intervalo. Ex: [i:0..K]
+                                           ':' seguido de nomevar. Ex: [i:S]
+                                */
+                                ( ":" 
+                                    ( 
+                                        (
+                                            nomeVar 
+                                            (
+                                                Intervalo 
+                                                
+                                                | 
+                                                
+                                                /*Lambda*/
+                                            )
+                                        ) 
+                                        
+                                        | 
+                                        
+                                        numero  (. dadosRepeticao.setLimiteInferior(t.val); .)
+                                        Intervalo 
+                                    ) 
+                                ) //--->TODO verificar se precisa de nomeMin Intervalo
+                                
+                                | 
+                                
+                                (
+                                    Operacao 
+                                    (. 
+                                        if(dadosLoop != null){ 
+                                            dadosLoop.setNovoIndice(dadosLoop.getNovoIndice() + t.val );
+                                        } 
+
+
+                                        if(condicao != null){
+                                            operacao.setComparador(t.val);
+                                        }
+
+
+                                        
+                                    .) 
+                                        (
+                                            numero  (. if(dadosLoop != null){dadosLoop.setNovoIndice(dadosLoop.getNovoIndice() + t.val );} .)
+                                            |
+                                            nomeMin (. if(dadosLoop != null){dadosLoop.setNovoIndice(dadosLoop.getNovoIndice() + t.val );} .)
+                                            | 
+                                            nomeVar (. if(dadosLoop != null){dadosLoop.setNovoIndice(dadosLoop.getNovoIndice() + t.val );} .) 
+                                        )
+
+                                        
+                                        (.
+                                            if(condicao != null){
+                                                operacao.setOperandoD(t.val);
+                                            }
+                                        .)
+                                ) 
+                                
+                                |
+                                
+                                /*Lambda*/ 
+                            )
+                            . //TODO -->
+    
+        ParentesisFatora 
+                =
+                "("
+                        BlocoFatorado  
+                ")"
+                |/*Lambda*/
+                .
+
+        //Colocar nomeMin.nomeMin e indice
+        BlocoFatorado   
+            = 
+            (
+                /*Caso 1: Começa com nomeMin*/
+                nomeMin (. nomeMetodos.add(t.val); .)
+                "->" 
+                /*Loop: pode começar com nomeMin ou [numero | nomeMin | nomeVar]*/
+                {
+                    (
+                        nomeMin (. nomeMetodos.add(t.val); .)
+                        | 
+                        "["
+                            (
+                                numero
+                                |
+                                nomeMin
+                                | 
+                                nomeVar
+                            ) 
+                        "]" 
+                    ) 
+                    "->"
+                } 
+                |
+                /*Caso 2: Começa com [numero | nomeMin | nomeVar]*/
+                "[" (numero | nomeMin | nomeVar) "]" "->" 
+                /*Loop: pode começar com nomeMin ou [numero | nomeMin | nomeVar]*/
+                {(nomeMin | "[" (numero | nomeMin | nomeVar) "]" ) "->"}
+            )                
+            /*Processo ou uma fatoração mais interna*/
+            (
+                nomeVar (. nomeProcessoFatora = t.val; .)
+                | 
+                ParentesisFatora
+            )
+            .
+
+        // FatoraProcesso  
+        //     =  
+        //     "("           //TODO -->                 
+        //         (
+        //             nomeMin
+        //             { "." nomeMin} 
+        //             |
+        //             "[" (numero | nomeMin | nomeVar) "]"
+        //         )
+        //         Indice
+        //         "->" 
+        //         nomeVar                            
+        //         Indice
+        //     ")"
+        //     | 
+        //     .
+                        
+    Subprocesso<out String nomeClasse> (. nomeClasse = ""; String stringProcToObj = ""; nomeMetodos.clear();  .)
+                    =   "," RegraTipoII<out nomeClasse> 
+                        "="
+                        (
+
+                        
+                        (. 
+                            nomeMetodos.clear(); /*flagTraceContinue = false; flagTraceEscolha = false; indexTraceSub = indexTrace;
+                            // System.out.println(indexTrace + " " + indexTraceSub);*/
+                        .)
+                        
+                            "("
+                                Transicao<out stringProcToObj>                              
+                            ")"
+                            |
+                            nomeVar
+                            
+                            (. 
+                                if((t.val).equals("STOP")){
+                                    // "insere um metodo fake para nao ter um array vazio e gerar exception"
+                                    nomeMetodos.add("_stop_"); 
+                                    objUtilitarios.addToArrayEscolha(t.val, nomeMetodos, arrayLista); 
+                                }else{
+                                    // "insere um metodo fake para nao ter um array vazio e gerar exception"
+                                    nomeMetodos.add("_init_"); 
+                                    objUtilitarios.addToArrayEscolha(t.val, nomeMetodos, arrayLista);
+                                } 
+                            .)
+                            
+                            // (NomeInicioMai | )
+                            Indice 
+                            //TODO ---> Precisa quando chama o processo diretamente em vez de uma acao?
+                        )
+                        
+                        
+                        (.  
+                            int escolhaToInt = 0;
+                            //TODO ---> colocar no loop do Subprocesso
+
+                            /*if(flagAcaoGuarda == false && indexTrace < objTrace.getValor().size())*/
+                            if(flagAcaoGuarda == false){
+
+                                //Leitura do teclado se  arrayLista > 1, implica na ocorrencia de OUs.
+                                    //Retorna 0 se tamanho == 1 (so ha um elemento) ou algo no intervalo 1..Tam se tamanho > 1 
+
+                                    escolhaToInt = objUtilitarios.inputEscolha(arrayLista);
+                                    
+                                    
+                                    Escolhas tmp = new Escolhas();
+
+                                    tmp.chave = nomeClasse;
+                                    tmp.arrayLista.addAll(arrayLista);
+                                    escolhas.add(tmp);
+                                    
+                                    //Array com o nome da classe, seus metodos e obj 
+                                    //String nomeDaClasse, String nomeDoProxProcesso, ArrayList<String> metodosArray, ArrayList<Nuplas> arrayDeSaida 
+                                    objUtilitarios.addClasseMetodos(reformatClassName(nomeClasse), reformatClassName(arrayLista.get(escolhaToInt).getChave()), arrayLista.get(escolhaToInt).getValor(), nomeClassesMetodos);
+
+                                }else{//TODO --> fazer para o loop de Subprocesso
+                                    //Se ha when, copia-se todos os metodos para um array<String> pois todos sao necessarios
+                                    //TODO ---> Tentar fazer de maneira mais eficiente sem essa copia de array
+                                    arrayMetodoLoop = new ArrayList<String>();
+                                    for(int i = 0; i < arrayLista.size(); i++){
+                                        for(int j = 0; j < arrayLista.get(i).getValor().size(); j++){
+                                            arrayMetodoLoop.add(arrayLista.get(i).getValor().get(j));
+                                        }
+                                    }
+                                    //TODO ---> Melhorar a forma como se obtem objetos/Processos nessa forma especifica de "when"
+                                    //TODO ---> melhorar, pois os metodos ficaram em dois arrays (arrayMetodoLoop e nomeClassesMetodos) e somente na escrita que se remove de um
+                                    //e faz-se a distincao se o metodo pertence ao loop. Eh caro, melhorar o custo.
+
+                                    //So grava um metodo do OU, depois em outra funcao eu o removo e gravo em seu lugar os metodos do OU qnd tem when e loop ao mesmo tempo
+                                    //TODO --> adequar o When para quando nao haver loop e ativar duas possibilidades ou apenas uma
+                                    objUtilitarios.addClasseMetodos(reformatClassName(nomeClasse), reformatClassName(arrayLista.get(0).getChave()), arrayLista.get(0).getValor(), nomeClassesMetodos);
+                                                                    
+                                }
+
+                                
+                                //Limpando o array para próximas ações
+                                nomeMetodos.clear();
+
+                                //Add ao arrayNupla
+                                //Esse array contem em cada posicao: nomeDaclasse, obj, metodos
+                                objUtilitarios.addClasseMetodosObjts(reformatClassName(nomeClasse), arrayLista, arrayNupla);                            
+
+                                //Limpando o array para o loop do Subprocesso que chama o Transicao que por sua vez chama o Escolha
+                                arrayLista.clear();
+                        .)
+                        
+
+                        //Loop do Subprocesso
+                        {
+                            "," RegraTipoII<out nomeClasse>
+                            "="
+                            (
+                                
+                                (. 
+                                   /* indexTrace = indexTrace;*/
+                                    nomeMetodos.clear(); /*flagTraceContinue = false; flagTraceEscolha = false;*/
+                                
+                                .)
+                                
+                                
+                                ["("] 
+                                Transicao<out stringProcToObj>                                     
+                                [")"]
+                                |
+                                nomeVar
+                                
+                                (. 
+                                    if((t.val).equals("STOP")){
+                                        // "insere um metodo fake para nao ter um array vazio e gerar exception"
+                                        nomeMetodos.add("_stop_"); objUtilitarios.addToArrayEscolha(t.val, nomeMetodos, arrayLista); 
+                                    }else{
+                                        // "insere um metodo fake para nao ter um array vazio e gerar exception"
+                                        nomeMetodos.add("_init_"); objUtilitarios.addToArrayEscolha(t.val, nomeMetodos, arrayLista);
+                                    } 
+                                .)
+                                
+                                // (NomeInicioMai | )
+                                Indice //Precisa quando chama o processo diretamente em vez de uma acao?
+                            )
+                            
+                            (.
+                                
+                                if(flagAcaoGuarda == false){
+                                    //Leitura do teclado se  arrayLista > 1, implica na ocorrencia de OUs.
+                                    //Retorna 0 se tamanho == 1 (so ha um elemento) ou algo no intervalo 1..Tam se tamanho > 1 
+                                   /*
+                                    
+                                    escolhaToInt = objUtilitarios.inputEscolhaTrace(arrayLista, objTrace.getValor().get(indexTrace) );*/
+                                    escolhaToInt = objUtilitarios.inputEscolha(arrayLista);
+
+
+                                    Escolhas tmp = new Escolhas();
+
+                                    tmp.chave = nomeClasse;
+                                    tmp.arrayLista.addAll(arrayLista);
+                                    escolhas.add(tmp);
+
+
+                                                                       
+                                    //Array com o nome da classe, seus metodos e obj 
+                                    //String nomeDaClasse, String nomeDoProxProcesso, ArrayList<String> metodosArray, ArrayList<Nuplas> arrayDeSaida 
+                                    objUtilitarios.addClasseMetodos(reformatClassName(nomeClasse), reformatClassName(arrayLista.get(escolhaToInt).getChave()), arrayLista.get(escolhaToInt).getValor(), nomeClassesMetodos);
+                                    
+    
+                                    
+                                    
+
+                                }else{//TODO --> fazer para o loop de Subprocesso
+                                    //Se ha when, copia-se todos os metodos para um array<String> pois todos sao necessarios
+                                    //TODO ---> Tentar fazer de maneira mais eficiente sem essa copia de array
+                                    arrayMetodoLoop = new ArrayList<String>();
+                                    for(int i = 0; i < arrayLista.size(); i++){
+                                        for(int j = 0; j < arrayLista.get(i).getValor().size(); j++){
+                                            arrayMetodoLoop.add(arrayLista.get(i).getValor().get(j));
+                                        }
+                                    }
+                                    //TODO ---> Melhorar a forma como se obtem objetos/Processos nessa forma especifica de "when"
+                                    //TODO ---> melhorar, pois os metodos ficaram em dois arrays (arrayMetodoLoop e nomeClassesMetodos) e somente na escrita que se remove de um
+                                    //e faz-se a distincao se o metodo pertence ao loop. Eh caro, melhorar o custo.
+
+                                    //So grava um metodo do OU, depois em outra funcao eu o removo e gravo em seu lugar os metodos do OU qnd tem when e loop ao mesmo tempo
+                                    //TODO --> adequar o When para quando nao haver loop e ativar duas possibilidades ou apenas uma
+                                    objUtilitarios.addClasseMetodos(reformatClassName(nomeClasse), reformatClassName(arrayLista.get(0).getChave()), arrayLista.get(0).getValor(), nomeClassesMetodos);
+                                                                    
+                                }
+
+                                
+                                //Limpando o array para próximas ações
+                                nomeMetodos.clear();
+
+                                //Add ao arrayNupla
+                                //Esse array contem em cada posicao: nomeDaclasse, obj, metodos
+                                objUtilitarios.addClasseMetodosObjts(reformatClassName(nomeClasse), arrayLista, arrayNupla);                            
+
+                                //Limpando o array para o loop do Subprocesso que chama o Transicao que por sua vez chama o Escolha
+                                arrayLista.clear();
+                            .)
+                            
+
+                        }                        
+                        
+                        |//Lambda
+                        /*
+                        (.                            
+                            
+                            if(flagTraceContinue == true && indexTrace < objTrace.getValor().size()){
+                                System.out.println("\nNAO HA CAMINHO VALIDO");
+                                System.out.println("TRACE REJEITADO");
+                                System.out.println("ABORTANDO EXECUCAO...");
+                                System.exit(0);
+                            }
+
+                            if(flagTraceEscolha == true && indexTrace < objTrace.getValor().size()){
+                                System.out.println("\nNAO HA CAMINHO VALIDO");
+                                System.out.println("TRACE REJEITADO");
+                                System.out.println("ABORTANDO EXECUCAO...");
+                                System.exit(0);
+                            }                                                       
+                        .)
+                        */
+                        .                      
+                        //Alterei o tipo de repetição, agora sem a recursividade                        
+                        // Subprocesso<out nomeClasse, nomeMetodos> 
+                        // | 
+
+    //Se passar um atributo <. ArrayList<arrayXyz> .> sem out ele nao reclama de falta de inicializacao
+    Escolha 
+                           
+                    =
+                    
+                        (
+                            //Com base no arraylist gerado na Transicao, consulta-se qnd ocorre uma "Escolha" para verificar nao determinismo e OUs
+                            "|" (. arrayEscolha = new ArrayList<String>(); .)
+                            AcaoDeGuarda //TODO -->
+                            ( 
+                                (
+                                    (    
+                                        (.
+                                            String auxiliarNomeMetodo = "";.)
+                                            nomeMin (. auxiliarNomeMetodo += t.val;
+                                        .)   
+                                       
+                                        [
+                                            "." (. auxiliarNomeMetodo += t.val; .)
+                                            nomeMin (. auxiliarNomeMetodo += t.val; .)                                                                                    
+                                        ]
+
+                                        //estava nomeMin.add()
+                                        (. arrayEscolha.add(auxiliarNomeMetodo); 
+                                        
+                                            if(dadosRepeticao != null){
+                                                if(dadosRepeticao.getIndice() != null){
+                                                    condicaoOperacao.setNomeAcao(auxiliarNomeMetodo);
+                                                }
+                                            }
+                                        .)  
+                                        
+                                        |
+                                        
+                                        "[" (numero | nomeMin | nomeVar) "]"
+                                        //TODO ---> Colocar no array
+                                    )                         
+                                    Indice //TODO -->
+                                )
+
+                                |
+
+                                AlfabetoExt 
+                                
+                                (.                                     
+                                    stringNomeAcao = objUtilitarios.escolhaOptAlfabeto(arrayAlfabeto, nomeMetodos); //Melhorar
+                                    arrayEscolha.add(stringNomeAcao);
+                                .)
+                                
+                                //arrumar o resto disso e verificar se  o resultado é diferente de null
+                                //se o metodo ta retornando vazio
+                            ) 
+                            "->" 
+                            RepeteAcaoEscolha<arrayEscolha> //Gera lambda
+                            //TODO ---> pensar para quando tiver método repetido
+                            (
+                                ParentesisFatora //Colocar no array
+                                /*O nomeProcessoFatora é obtido de ParentesisFatora */
+                                (.objUtilitarios.addToArrayEscolha(nomeProcessoFatora, arrayEscolha, arrayLista);.)   
+                                //FatoraProcesso //TODO -->
+                                
+                                | 
+                                nomeVar                                 
+                                
+                                (.   
+                                    String procObj = "";
+                                    
+                                        procObj = t.val;
+                                        objUtilitarios.addToArrayEscolha(procObj, arrayEscolha, arrayLista);    
+                                        //CONTINUE
+
+                                        if(dadosRepeticao != null){
+                                            
+                                            if(dadosRepeticao.getIndice() != null){
+                                                condicaoOperacao.setProxProcesso(t.val);                                                
+                                            }
+                                        }
+                                .)
+                                
+
+                                
+                                Indice //TODO -->
+                                
+                                (.
+                                    if(dadosRepeticao != null){
+                                        if(operacao != null){
+                                            condicaoOperacao.setOperacao(operacao);
+                                            dadosRepeticao.getCondicaoOperacao().add(condicaoOperacao);
+                                            
+                                        }
+                                    }
+                                .)
+                                
+                                /*
+                                (.
+                                    if(dadosLoop != null){
+                                        dadosLoop.setCondicaoVal(stringRun);
+                                    }
+                                    // dadosLoop.setCondicaoVal(stringRun);
+                                    DadosLoop dadosAux = new DadosLoop();
+                                    dadosAux.setOrdemIntervalo(dadosLoop.getOrdemIntervalo());
+                                    dadosAux.setIndiceVal(dadosLoop.getIndiceVal());
+                                    dadosAux.setCondicaoVal(new String(dadosLoop.getCondicaoVal()));
+                                    dadosAux.setNovoIndice(dadosLoop.getNovoIndice());
+
+                                    arrayDadosLoop.add(dadosAux);
+                                    stringRun = "";
+                                    dadosLoop.clear();
+                                    //TODO ---> Replicar para a repetição do escolha
+                                .)
+                                */
+                            )
+                            
+                        )                        
+                        //Loop da ebnf, removi a recursividade padrao
+                        {
+
+                            (
+                                "|" 
+                                //O Loop ocorre no mesmo processo, para OU's em outro processo a Transicao que chama o primeiro e depois esse loop eh acionado se preciso
+                                AcaoDeGuarda //TODO -->
+                                ( 
+                                    (
+                                        (
+                                            (.
+                                                String auxiliarNomeMetodo = "";.)
+                                                nomeMin
+                                                (.
+                                                    auxiliarNomeMetodo += t.val;
+                                                    arrayEscolha.clear();
+                                                .) 
+                                            
+                                            
+                                              
+                                            // (NomeInicioMin | )
+                                            [ 
+                                                "." (.auxiliarNomeMetodo += t.val;.)
+                                                nomeMin (.auxiliarNomeMetodo += t.val; arrayEscolha.add(auxiliarNomeMetodo);.)
+                                            ]  
+
+                                            (.                                              
+                                                                                              
+                                                arrayEscolha.add(auxiliarNomeMetodo);
+                                                if(dadosRepeticao != null){
+                                                    if(dadosRepeticao.getIndice() != null){
+                                                        condicaoOperacao.setNomeAcao(auxiliarNomeMetodo);
+                                                    }
+                                                }
+                                            .)
+                                            
+                                            |
+                                            
+                                            "[" (numero | nomeMin |nomeVar) "]"
+                                            //TODO ---> COLOCAR no ARRAY
+
+                                        )                             
+                                        Indice //TODO -->
+                                    ) 
+                                    | 
+                                    AlfabetoExt
+                                    
+                                    (.  
+                                        stringNomeAcao = objUtilitarios.escolhaOptAlfabeto(arrayAlfabeto, nomeMetodos); 
+                                        arrayEscolha.add(stringNomeAcao);
+                                    .)
+                                    
+                                ) 
+                                "->" 
+                                RepeteAcaoEscolha<arrayEscolha> //Gera lambda
+                                (
+                                    ParentesisFatora
+                                    /*O nomeProcessoFatora é obtido de ParentesisFatora */
+                                    (.objUtilitarios.addToArrayEscolha(nomeProcessoFatora, arrayEscolha, arrayLista);.)
+                                    // FatoraProcesso //TODO -->
+                                    | 
+                                    nomeVar                                    
+                                    
+                                    (.                                     
+                                        //Tomar cuidado em alteracoes futuras, se houver loop o valor mais recente é o do loop.
+                                        //Nao acumula-se 
+
+                                        String procObj = "";
+                                        procObj = t.val;
+
+
+                                        objUtilitarios.addToArrayEscolha(t.val, arrayEscolha, arrayLista);
+
+
+                                        if(dadosRepeticao != null){
+                                            if(dadosRepeticao.getIndice() != null){
+                                                condicaoOperacao.setProxProcesso(t.val);
+                                            }
+                                        }
+                                        
+                                    .)                                    
+                                    
+                                    Indice //TODO -->
+
+                                    (.
+                                        if(dadosRepeticao != null){
+                                            if(operacao != null){
+                                                condicaoOperacao.setOperacao(operacao);
+                                                dadosRepeticao.getCondicaoOperacao().add(condicaoOperacao);
+                                            }
+                                        }
+                                    .)
+                                )
+                            )
+
+                        }
+                        
+                        (.     
+                            
+
+                        // System.out.println("Array Lista: " + arrayEscolha);
+                            //Limpando o array de escolhas
+                            // arrayLista.clear();
+                           
+                        .)
+                        
+
+                        |//Lambda
+                        
+                        
+
+                        //A regra gera lambda
+                        // Escolha<out saidaNaoDeterminismo> 
+                        // | 
+                        .
+    
+    AcaoDeGuarda    =  "when" (. /*stringRun += "\tif";*/ flagAcaoGuarda = true; .)
+                        Guarda
+                        |
+                        .
+    
+    Guarda          =  nomeVar (. stringRun += ("(" + t.val + ")"); .)
+                       |
+                       nomeMin
+                       | 
+                       CallParentesis.
+
+    
+    CallParentesis = Parentesis.
+
+    Parentesis     = "(" 
+                            ( 
+                                (Parentesis {("||" | "&&") Parentesis}) 
+                                | 
+                                BlocoInterno
+                            ) 
+                     ")".
+
+    BlocoInterno   = Fator {("||" |"&&") (Parentesis | Fator)}. 
+    
+    Fator = 
+            (
+                numero  (. stringRun += t.val; .) 
+                | 
+                nomeMin (. stringRun += t.val; .)
+                |
+                nomeVar (. stringRun += t.val; .)
+            )
+            (.
+                if(dadosRepeticao != null){
+                    if(dadosRepeticao.getLimiteInferior() != null){
+                        condicao = new Condicao();
+                        condicao.setOperandoE(t.val);
+                    }
+                }
+            .)
+            
+            [
+                (
+                    Operacao (. stringRun += t.val; .) 
+                    | 
+                    IgualdadeDesig 
+                    (. 
+                        stringRun += t.val;
+                        if(condicao != null ) {condicao.setComparador(t.val);}
+                    .) 
+                )
+                
+                
+                (
+                    numero  (. stringRun += t.val; .)
+                    |
+                    nomeMin (. stringRun += t.val; .)
+                    |
+                    nomeVar (. stringRun += t.val; .)
+                )
+
+                (.
+                    /*Dados de repeticao: condicao no formato (i<N)*/
+
+                    if(dadosRepeticao != null){
+                        if(condicao != null ) {
+                            condicao.setOperandoD(t.val);
+                            /*Cria-se agora pois há indicação de loop e uma condicao com when*/
+                            condicaoOperacao = new CondicaoOperacao();
+                            condicaoOperacao.setCondicao(condicao);
+                        }
+                    }
+                .)
+            ]
+            .
+    
+    
+    Condicao           =  
+                        "(" 
+                            (. stringRun += t.val; .)
+                            (
+                                numero  (. stringRun += t.val; .) 
+                                | 
+                                nomeMin (. stringRun += t.val; .)
+                                |
+                                nomeVar (. stringRun += t.val; .)
+                            ) 
+                            [
+                                (
+                                    Operacao (. stringRun += t.val; .) 
+                                    | 
+                                    IgualdadeDesig (. stringRun += t.val; .) 
+                                ) 
+                                (
+                                    numero  (. stringRun += t.val; .)
+                                    |
+                                    nomeMin (. stringRun += t.val; .)
+                                    |
+                                    nomeVar (. stringRun += t.val; .)
+                                )
+                            ]
+                            
+                            {
+                                (
+                                    "&&" 
+                                    | 
+                                    "||"
+                                )
+                                (
+                                numero  (. stringRun += t.val; .) 
+                                | 
+                                nomeMin (. stringRun += t.val; .)
+                                |
+                                nomeVar (. stringRun += t.val; .)
+                                ) 
+                                [
+                                    (
+                                        Operacao (. stringRun += t.val; .) 
+                                        | 
+                                        IgualdadeDesig (. stringRun += t.val; .) 
+                                    ) 
+                                    (
+                                        numero  (. stringRun += t.val; .)
+                                        |
+                                        nomeMin (. stringRun += t.val; .)
+                                        |
+                                        nomeVar (. stringRun += t.val; .)
+                                    )
+                                ]                                 
+                            }
+                            
+                        ")"             
+                        (. stringRun += t.val; .)
+                        .
+
+    ProcParametro 
+                    (. procParam = new ArrayList<Pares>(); .) 
+                    = 
+                    "("
+                        nomeVar (. String tmp = t.val; .)                         
+                        "=" 
+                        numero  (. Pares par = new Pares(tmp, t.val); .) 
+                        {
+                            Operacao (. par.setUlt(par.getUlt() + t.val); .)
+                            numero   (. par.setUlt(par.getUlt() + t.val); .)
+                        }
+                        (. procParam.add(par);
+                            dadosRepeticao.getProcParam().add(par);
+                        .)
+
+                        //Loop
+                        {
+                            "," 
+                            nomeVar (. tmp = t.val; .)
+                            "=" 
+                            numero  (. par = new Pares(tmp, t.val); .) 
+                            {
+                                Operacao (. par.setUlt(par.getUlt() + t.val); .)
+                                numero   (. par.setUlt(par.getUlt() + t.val); .)
+                            }
+                            (. procParam.add(par); dadosRepeticao.getProcParam().add(par);.)
+                        }                        
+                    ")"
+                    // (. for(int i = 0; i < procParam.size(); i++){
+                    //         System.out.println("\nProcess Parameter: " + procParam.get(i).getPrim() + "=" + procParam.get(i).getUlt());
+                    //     } 
+                    // .)
+                    //Está em memoria para talvez dedicir em qual classe ficara
+                    .
+    
+    AlfabetoExt     =  "{" //TODO -->
+                            (
+                                nomeMin
+                                (. 
+                                    arrayAlfabeto.add(t.val);                                        
+                                .)
+                                // (NomeInicioMin | )
+                                { "." nomeMin}
+                                |
+                                "[" numero "]" //TODO --> Verificar o caso [N] onde N = 107 == [107]
+                            )
+                            {
+                            "," 
+                            (
+                                nomeMin 
+                                (. 
+                                    arrayAlfabeto.add(t.val);                                            
+                                .)
+                                // (NomeInicioMin | )
+                                { "." nomeMin}
+                                |
+                                "[" (numero | nomeMin | nomeVar ) "]"
+                            )
+                            } 
+                        "}".
+    
+    
+    Rotulo<out String stringSaida> 
+                        (.
+                            stringSaida = ""; 
+                            dadosRepeticaoParalela = new DadosRepeticaoParalela(); 
+                        .)
+
+                         = 
+                         
+                        nomeMin (. stringSaida += t.val; .)
+                        (. 
+                            dadosRepeticaoParalela.setObjNomeAcao(t.val);  
+                        .)
+                        ComposicaoParametrizadaTipoII 
+                        (
+                            ":" /*(.stringSaida += t.val;.)*/ 
+                            | 
+                            "::"
+                        ) 
+                       
+                        |
+                        
+                        ComposicaoParametrizadaTipoI
+                        
+                        |
+                        
+                        /*Lambda*/ 
+                         .
+
+    RenomearRotulo     = 
+                            (. String aux = ""; .)
+                            "/" "{" 
+                                nomeMin (. aux += t.val; .)
+                                "/" 
+                                nomeMin (. relabelling.add(new Relabelling(aux, t.val)); .)
+                                
+                                {
+                                    "," 
+                                    nomeMin (. aux = t.val; .)
+                                    "/" 
+                                    nomeMin (. relabelling.add(new Relabelling(aux, t.val));  .)
+                                }
+                                 
+                            "}"
+                            |//Lambda
+                            .
+
+    ActionHiding = 
+                      "\\" "{" nomeMin {"," nomeMin} "}" 
+                      | 
+                      "@" "{" nomeMin {"," nomeMin} "}" 
+                      |
+                       /*Lambda*/
+                       .
+
+    ComposicaoParametrizadaTipoI = 
+                                "forall" 
+                                (. 
+                                    if(dadosRepeticaoParalela != null){
+                                        dadosRepeticaoParalela.setProcParam(procParam);                                        
+                                    } 
+                                .)
+                                "["
+                                    nomeMin 
+                                    (. 
+                                        if(dadosRepeticaoParalela != null){
+                                            dadosRepeticaoParalela.setIndice(t.val);
+                                        }
+                                    .)
+                                    ":"  
+                                    (
+                                        nomeMin 
+                                        | 
+                                        nomeVar (. dadosRepeticaoParalela.setLimiteInferior(t.val); .) 
+                                        | 
+                                        numero (. dadosRepeticaoParalela.setLimiteInferior(t.val); .)
+                                    )
+                                    ".."
+                                    (
+                                        nomeVar (. dadosRepeticaoParalela.setLimiteSuperior(t.val); .)
+                                        |
+                                        numero  (. dadosRepeticaoParalela.setLimiteSuperior(t.val); .) 
+                                    )
+                                "]"
+
+                                nomeMin  (. dadosRepeticaoParalela.setObjNomeAcao(t.val); .)
+                                "["
+                                    nomeMin (.dadosRepeticaoParalela.setIndiceObjRepeticao(t.val);.) 
+                                "]"
+                                (
+                                    ":" 
+                                    | 
+                                    "::"
+                                    )                                
+                                .
+
+    ComposicaoParametrizadaTipoII =
+
+                                "["
+                                    nomeMin 
+                                    (. 
+                                        /*TODO ---> Ajustar: Precisa de proparam pra ter loop?, funciona sem */
+                                        if(dadosRepeticaoParalela != null){
+                                            if(procParam != null){
+                                                dadosRepeticaoParalela.setProcParam(procParam);
+                                            }
+                                            dadosRepeticaoParalela.setIndice(t.val);
+                                        } 
+                                    .) 
+                                    ":"  
+                                    (
+                                        nomeMin 
+                                        | 
+                                        nomeVar (. dadosRepeticaoParalela.setLimiteInferior(t.val); .)
+                                        | 
+                                        numero (. dadosRepeticaoParalela.setLimiteInferior(t.val); .)
+                                    )
+                                    ".."
+                                    (
+                                        nomeVar (. dadosRepeticaoParalela.setLimiteSuperior(t.val); .)
+                                        | 
+                                        numero (. dadosRepeticaoParalela.setLimiteSuperior(t.val); .)
+                                    )
+                                "]"                                
+                                |//Lambda
+                                .  
+    ComposicaoParalela = 
+        "||" 
+        nomeVar
+        (. 
+            String stringSaida = ""; 
+
+            //---> Colocar em um array para o caso de N composições
+            
+            /*Contém o nome da composição e os respectivos dados e, um array de array do tipo dados paralelos*/
+            ComposicaoParalelaData objComposicaoParalela = new ComposicaoParalelaData();                        
+            objComposicaoParalela.setNomeComposicao(t.val);
+            /*Abriga uma chave e um valor (Array de strings)*/
+            DadosParalelos objDadosParalelos = new DadosParalelos(); 
+            ArrayList<DadosParalelos> arrayDadosParalelos = new ArrayList<DadosParalelos>(); 
+        .)
+
+
+        (
+            ProcParametro //TODO---> Dividir em uma nova regra só para o paralelo e verificar se precisa de
+            //um array para isso pois cada processo pode ter o seu procpram (talvez colocar no arrayNupla)
+            |
+            /*Lambda*/
+        )
+        "=" 
+        "("
+            (
+                Rotulo<out stringSaida> /*Gera Lambda*/
+                
+                |
+
+                "{"
+                    
+                    nomeMin        //TODO ---> Verificar no LTSA se so aceita nomeMin
+                    
+                    {
+                        "," 
+                    }
+                "}" "::"
+            )
+            nomeVar 
+            (.                           
+            
+            
+            /*Dados do loop - rotulo parametrizado*/
+            if(dadosRepeticaoParalela.getIndice() != null){//Indica que há de fato parametrização
+                dadosRepeticaoParalela.setNomeProcesso(objComposicaoParalela.getNomeComposicao());
+                dadosRepeticaoParalela.setNomeProcessoRepeticao(t.val);
+                
+                objDadosParalelos.setChave(t.val);
+                //Add os objetos (ações) da rotulação parametrizada aos dados paralelos
+                objDadosParalelos = objUtilitarios.escreverProcessoCompostoParametrizadov2(dadosRepeticaoParalela, objDadosParalelos);
+                //Array de dados paralelos
+                arrayDadosParalelos.add(objDadosParalelos); 
+
+                // arrayDadosRepeticaoParalela.add(dadosRepeticaoParalela);
+                dadosRepeticaoParalela = null;
+
+            /*Rótulo simples*/
+            }else{
+                /*Acrescentando o nome do processo concorrente e o seu rótulo se houver*/
+                objDadosParalelos.setChave(t.val);
+                /*Caso não haja rótulo, o nome padão do objeto para o processo/class é objNomeProcesso*/
+                if(stringSaida.equals("")){
+
+                    boolean check = false;
+                    for(int k = 0; k < arrayDadosParalelos.size(); k++){
+                        if(arrayDadosParalelos.get(k).getValor().contains((t.val).toLowerCase() + "$")){
+                            check = true;
+                        }
+                    } 
+
+                    if(check == false){
+                        objDadosParalelos.addDadosParalelos((t.val).toLowerCase() + "$");
+                        // alfabetoParalelo++;
+                        arrayDadosParalelos.add(objDadosParalelos); 
+                    }
+                    
+
+                }else{
+                    
+                    
+                        objDadosParalelos.addDadosParalelos( (t.val).toLowerCase() + "$" + stringSaida); stringSaida = "";
+                        arrayDadosParalelos.add(objDadosParalelos); 
+
+                    
+                }
+                // arrayDadosParalelos.add(objDadosParalelos); 
+            }
+
+            .)                                                      
+
+
+            //Loop n composicoes paralelas
+            {
+                "||" 
+
+                (
+                    Rotulo<out stringSaida>  /*Gera Lambda*/                              
+                    
+                    |
+                    
+                    "{"
+                        nomeMin 
+                        {"," nomeMin}
+                    "}" 
+                    "::"
+                )
+                nomeVar 
+                (. 
+                    /*Dados Loop*/
+                    if(dadosRepeticaoParalela.getIndice() != null){
+                        dadosRepeticaoParalela.setNomeProcesso(objComposicaoParalela.getNomeComposicao());
+                        dadosRepeticaoParalela.setNomeProcessoRepeticao(t.val);
+                        
+                        objDadosParalelos = new DadosParalelos();
+                        /*Acrescentando o nome do processo concorrente e o seu rótulo se houver*/
+                        objDadosParalelos.setChave(t.val);                                        
+                        objDadosParalelos = objUtilitarios.escreverProcessoCompostoParametrizadov2(dadosRepeticaoParalela, objDadosParalelos);
+                        
+                        // arrayDadosRepeticaoParalela.add(dadosRepeticaoParalela);
+                        dadosRepeticaoParalela = null;
+                    }else{
+                        /*Caso não seja um label no formato loop, então faça: */
+                        
+                        objDadosParalelos = new DadosParalelos();
+                        /*Acrescentando o nome do processo concorrente e o seu rótulo se houver*/
+                        objDadosParalelos.setChave(t.val);
+                        /*Caso não haja rótulo, o nome padão do objeto para o processo/class é objNomeProcesso*/
+                        if(stringSaida.equals("")){
+                            
+                            boolean check = false;
+                            for(int k = 0; k < arrayDadosParalelos.size(); k++){
+                                if(arrayDadosParalelos.get(k).getValor().contains((t.val).toLowerCase() + "$")){
+                                    check = true;
+                                }
+                            }
+
+                            if(check == false){
+                                objDadosParalelos.addDadosParalelos((t.val).toLowerCase() + "$");
+                                // alfabetoParalelo++;
+                            }
+
+                            
+                        }else{                            
+                            objDadosParalelos.addDadosParalelos( (t.val).toLowerCase() + "$" + stringSaida); stringSaida = "";
+                        }
+                    }
+                    
+                    /*Verifica se o processo paralelo já existe no array, se sim acrescenta-se apenas o rótulo caso ocorra*/
+                    arrayDadosParalelos = objUtilitarios.haProcessoParalelo(arrayDadosParalelos, objDadosParalelos, t.val); 
+
+                .)
+            }
+        ")" 
+        (. 
+          
+            objComposicaoParalela.getArrayComposicao().add(arrayDadosParalelos);
+            
+            /*Salvando a referência no objeto global*/
+            composicaoParalelaData = objComposicaoParalela;
+            
+            //Array principal da composicao, caso haja mais de uma. Não está sendo utilizado
+            // arrayComposicaoParalela.add(objComposicaoParalela);
+            
+
+            objComposicaoParalela = null;
+            objDadosParalelos = null;
+            arrayDadosParalelos = null;
+            
+            // objUtilitarios.imprimirArrayProcessosParalelos(arrayComposicaoParalela);
+        .)
+        RenomearRotulo 
+        .
+END Fsp3.

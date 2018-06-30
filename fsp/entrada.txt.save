@@ -1,0 +1,536 @@
+COUNT (N=3)   = COUNT[0],
+COUNT[i:0..N] = (when(i<N) inc->COUNT[i+1]
+                |when(i>0) dec->COUNT[i-1]
+                ).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+TODO:
+
+    Checar ordem do TRACE
+
+    COUNT[i:0..N] = (when(i<N) inc->COUNT[i+1] | when(i>0) dec->COUNT[i-1]). -- verificar mais de um caminho habilitado
+
+
+    Fazer: (when B x -> P | y -> Q)
+
+    Arrumar escolha: caso de loop
+
+    Testar Alfabeto    
+
+    Verificar o parentesis fatora do ESCOLHA        
+
+    Arrumar Loop no processo comum    
+
+    Arrumar const N = 1
+            range T = 0..N
+            range R = 0..2*N
+            SUM = (in[a:T][b:T]->TOTAL[a+b]), TOTAL[s:R] = (out[s]->SUM).
+        Definir onde ficarão as constantes, arrumar o loop/matriz/vetor  
+    
+    
+    Verificar a situação do STOP
+
+    Arrumar Fatoração de ações (Parcialmente corrigido, falta nomeMin.nomeMin)
+
+    Arrumar ação no formato: x.y->PROCESSO
+
+
+
+------------------------------------------------------------------------------------
+    Arrumar, SWITCH = OFF, um jeito mais eficiente sem usar _init_ ok
+
+    Arrumar ação repetida -- ok
+
+    Arrumar a instância do mesmo objeto quando ocorre um Choice -- ok
+
+    Arrumar escolha: só pode escrever um caminho -- ok
+        Perguntar o caminho no escolha -- ok
+
+    Tratar qnd digitar errado trafficlight$1.orange, digitar apenas orange por exemplo -- ok
+
+    Arrumar DRINKS = (red->coffee->DRINKS | blue->tea->DRINKS). -- ok
+
+    Arrumar COIN = (toss->HEADS|toss->TAILS), HEADS= (heads->COIN), TAILS= (tails->COIN). -- ok
+
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+
+
+COIN = (toss->HEADS|toss->TAILS | bla -> COIN),
+HEADS= (heads->COIN | heads -> Heads),
+TAILS= (tails->COIN | tails -> TAILS).
+
+COUNT (N=3) = COUNT[0],
+COUNT[i:0..N] = ( when(i<N) inc->COUNT[i+1] | when(i>0) dec->COUNT[i-1] ).
+
+COIN = (toss->test->toss->toss->HEADS |toss->debug->toss->TAILS | toss->foo->HEADS),
+HEADS= (heads->COIN),
+TAILS= (tails->COIN).
+
+COIN = (toss->test->toss->toss->HEADS |toss->debug->toss->TAILS | toss->foo-> HEADS),
+HEADS= (heads->COIN),
+TAILS= (tails->COIN).
+
+C = ( a -> (g->D)  ),
+D = ( h->(k->D) ).
+
+C = ( a -> ( b -> e ->(f->(g->C)) ) ).
+
+
+A = ( a-> ( b-> (c->A) ) ).
+B = ( [107] -> ( [108]-> e ->([109]->B) ) ).
+C = ( [107] -> ( [108]-> e ->(f->C) ) ).
+C = ( [107] -> ( [108]-> e ->(f->(g->C)) ) ).
+
+ALT = (a->b->c->BOLD),
+BOLD = (d->e->DARK),
+DARK = (h->ALT).
+
+CALL = (f->g->CALL).
+
+||AC = (a:ALT || c:CALL || s[i:4..6]:DARK).
+
+A = (a->b->c->B),
+B = (d->e->A).
+
+C = (f->g->C).
+
+||AC = (a:A || c:C).
+
+A = (a->b->c->B),
+B = (d->e->A).
+
+C = (f->g->C).
+
+||AC = (A || C).
+
+USER = (acquire->use->release->USE), USE = (bla->xablau->TEST), TEST = (a->b->c->STOP)
+\{xablau, acquire, b}.
+
+USER = (acquire->use->release->USE), USE = (bla->xablau->TEST), TEST = (a->b->c->STOP)
+@{acquire, use, release}.
+
+SWITCH = (on->off->SWITCH).
+||SWITCHES(N=2) = (s[i:1..3]:SWITCH).
+
+SWITCH = (on->off->SWITCH).
+||SWITCHES(N=3) =(forall[i:1..N] s[i]:SWITCH || f[i:1..N]:SWITCH || a:SWITCH || b:SWITCH || SWITCH).
+
+
+ITCH = (scratch->STOP).
+CONVERSE = (think->talk->STOP).
+||CONVERSE_ITCH = (a:ITCH || b:ITCH || ITCH || ITCH || ITCH || b:CONVERSE || CONVERSE || f:CONVERSE).
+
+"/"
+@TRACE
+aItch.scratch
+objItch_b.think
+objItch_b.talk
+"/"
+
+
+
+
+DRINKS = (coin5p -> DRINK5 | coin10p -> DRINK10 | coin20p -> DRINK20),
+
+DRINK5 =  (coin5p -> coin5p -> SUCCESS | coin10p->SUCCESS | coin20p->charge10p->SUCCESS),
+
+DRINK10 = (coin5p -> SUCCESS | coin10p->charge5p->SUCCESS),
+
+DRINK20 = (charge5p -> SUCCESS),
+
+SUCCESS = (can->DRINKS).
+
+
+
+
+@TRACE
+red
+orange
+gray
+green
+black
+(  ( ((a<b) || (a<b)) || ((a<b)) ) || ((a<b))   ).
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+
+range Nadasd12312_NN = 0..N 
+SERVERv2 = (accept.request
+            ->service->accept.reply->SERVERv2).
+CLIENTv2 = (call.request
+            ->call.reply->continue->CLIENTv2).
+
+||CLIENT_SERVERv2 (N = 2) = (a:CLIENTv2 || b:CLIENTv2 || {aasd4234FDHD_jdgjd, bdsad21312aFA_}::SERVERv2)
+                    /{call/accept}.
+     
+
+
+
+( ( (N < b) || (a || b) ) ).
+
+
+RESOURCE = (acquireAaB1_a.dask->release->RESOURCE_adasdasVAASFAS2321_sda12312asdasASFAA).
+
+USER = (acquire->use->release->USER).
+
+||RESOURCE_SHARE (N =2) =
+      ( forall[i:12..N] s[i]::USER || s[i:1..N]::RESOURCE).
+
+SERVERv2 = (accept.request ->service->accept.reply->SERVERv2).
+CLIENTv2 = (call.request ->call.reply->continue->CLIENTv2).
+
+||CLIENT_SERVERv2 = (ab:CLIENTv2 || SERVERv2)
+                    /{call/accept}.
+      
+
+RESOURCE = (acquire->release->RESOURCE).
+USER = (acquire->use->release->USER).
+||RESOURCESHARE = (a:USER || b:USER || {a,b}::RESOURCE).
+
+
+
+RESOURCE = (acquire->release->RESOURCE).
+
+USER = (acquire->use->release->USER).
+
+||RESOURCE_SHARE (N =2) =
+      ( forall[i:1..N] s[i]::USER || s[i:1..N]::RESOURCE).
+
+
+
+RESOURCE = (acquire->release->RESOURCE).
+USER = (acquire->use->release->USER).
+||RESOURCE_SHARE =
+      ({a,b}::USER).
+
+
+SWITCH = (on->off->SWITCH).
+||SWITCHES(N=3) =(forall[i:1..N] s[i]:SWITCH).
+
+
+CLIENT = (call->wait->continue->CLIENT).
+SERVER = (request->service->reply->SERVER).
+||CLIENT_SERVER = (a: CLIENT || b: SERVER)
+                 /{call/request, reply/wait}.
+
+
+RESOURCE = (acquire->release->RESOURCE).
+
+USER = (acquire->use->release->USER).
+
+||RESOURCE_SHARE (N =2) =
+      ( forall[i:1..N] s[i]:USER || s[i:1..N]:RESOURCE).
+
+
+SWITCH = (on->off->SWITCH).
+
+||SWITCHES(N=3) =(s[i:1..N]:SWITCH).
+
+
+SWITCH = (on->off->SWITCH).
+||SWITCHES =(SWITCH).
+
+
+const A = 8
+const B = 1
+range Raa = 0..A
+const Bla1 = 10
+ 
+RADIO (Naa12 = 10, N = 10) = OFF,
+OFF = (on->ON),
+ON = (off12a->OFF |when (A) reset->ON |scan[A]->FREQUENCIA[A-1]
+	 ),
+FREQUENCIA[i:0..N] = (when(i) scan[i]->FREQUENCIA[i-1] |when(i<B) end->ON |when(i>=B || i<A) lock[i+1]->LOCK[i] |off->OFF),
+LOCK[i:0..N] = (reset->ON |off->OFF |when(i>=B) scan[i]->FREQUENCIA[i-1] |when(i<B)scan->end->ON).
+
+
+
+RADIO = (on->ON),ON = (f108->MENU),MENU = (scan->SCAN | reset->RESET | off->RADIO),
+SCAN = (f107->MENU1 | lock->LOCK),MENU1 = (scan->SCAN1 | reset->RESET | off->RADIO),
+SCAN1 = (f106->MENU2 | lock->LOCK),MENU2 = (scan->SCAN2 | reset->RESET | off->RADIO),
+SCAN2 = (f105->MENU3 | lock->LOCK),MENU3 = (scan->SCAN3 | reset->RESET | off->RADIO),
+SCAN3 = (f104->MENU4 | lock->LOCK),MENU4 = (scan->SCAN4 | reset->RESET | off->RADIO),
+SCAN4 = (f103->MENU5 | lock->LOCK),MENU5 = (scan->SCAN5 | reset->RESET | off->RADIO),
+SCAN5 = (f102->MENU6 | lock->LOCK),MENU6 = (scan->SCAN6 | reset->RESET | off->RADIO),
+SCAN6 = (f108->MENU | lock->LOCK),LOCK = (end->STOP2 | reset->RESET),
+RESET = (f108->MENU),STOP2 = (off->RADIO).
+/*
+@TRACE
+red
+orange
+gray
+green
+black
+
+
+RADIO = (on->FM108),
+FM108 = (lock->FM108
+     |scan->FM107
+     |reset->FM108
+     |off->RADIO),
+
+FM107 = (lock->FM107
+     |scan->STOP
+     |reset->FM108
+     |off->RADIO).
+
+"/*"
+@TRACE
+on
+scan
+off
+"/"
+
+
+
+
+
+
+
+
+
+
+
+
+TODO ---> Verificar se o OU funciona em Subprocesso e tratar casos como ausencia de valor no trace em vez de mostrar exception tentar mostrar uma
+msg mais elegante
+
+
+CORES = (red->orange->{blue, gray}->green->black->CORES | rose -> purple -> yellow -> CORES).
+"/*"
+@TRACE
+red
+orange
+blue
+green
+black
+"/"
+
+----------------- Adaptar
+
+CORES = (red->orange->green->black->CORES | rose -> purple -> yellow -> CORES).
+
+
+COUNT (N=3) = COUNT[0],
+COUNT[i:0..N] = (when(i<N) inc->COUNT[i+1]
+                |when(i>=1) dec->COUNT[i-1]
+).
+
+COUNTDOWN (N=3)  = COUNTDOWN[N],
+COUNTDOWN[i:0..N] =
+(when(i>=1) tick->COUNTDOWN[i-1]
+|when(i<1)beep->bla->STOP
+|stop->STOP
+
+).
+
+SWITCH = OFF,
+OFF
+= (on -> ON),
+ON
+= (off-> OFF).
+
+
+SWITCH = STOP.
+
+TRAFFICLIGHT = (red->orange->green->orange
+->black->orange->TRAFFICLIGHT).
+
+TRAFFICLIGHT = (red->orange->green->orange
+->black->orange->TRAFFICLIGHT | rose -> purple -> rose -> TRAFFICLIGHT).
+
+TRAFFICLIGHT = (red->orange->green->orange
+->black->orange->TRAFFICLIGHT).
+
+SWITCH = TEST,
+TEST   = (liga->LIGA),
+LIGA   = (desliga->TEST).
+
+SWITCH = STOP.
+
+SWITCH = (go->OFF),
+OFF    = (on -> STOP).
+
+SWITCH = (go->OFF | go->STOP),
+OFF    = (bla -> SWITCH).
+--------------------------
+
+COIN (N = 3*4, K = 5)  = (toss->abc->COIN[K]),
+COIN [j:0..N*2] = 
+(
+      when (N<j) repita->COIN[j-1]
+    | when (N==j) notifique->ST
+    | pare->STOP  
+),
+ST = (fim->STOP).
+
+
+-----O coin é escrito duas vezes
+    Talvez não encerrar a chave até que não ocorra mais o processo em questao
+    Vai ser preciso guardar em memoria tanto uma referencia para abrir o arquivo para uma nova leitura (estrutura com o nomes dos arquivos já criados)
+    bem como uma estrutura que contenha todos os processos nela em memoria
+
+    Nesse exemplo,  o que fazer com o ST que é chamado no loo? 
+        | when (N==j) notifique->ST
+        | pare->STOP  
+        ),
+        ST = (fim->STOP).
+
+    E se o loop nao for na processo principal? Tentar montar um exemplo
+
+COIN  = (toss->abc->ADBLOCK | tack->{ijk, fgh}->B | tic->{rf, mu}->C),
+A     = (heads->wio->C | bla->STOP),
+C     = (finalize->{dot, com}->STOP | exit->STOP).
+
+COIN  = (toss->HEADS|tack->TAILS | tic->TAILS),
+            HEADS = (heads->abc->COIN),
+            TAILS = ({nd, fsp}->oeee->{tails, ole}->teste->{adasd, asdasg}->MOEDA | hue->BR),
+			BR =    (finalize->MOEDA),
+            MOEDA = (abc->{dot, com}->STOP).
+
+
+
+RUNNING      = ({suspend,sleep}->NONRUNNABLE
+                |yield->RUNNABLE
+                |{stop, end}->TERMINATED
+                |yield->RUNNING).
+
+
+TODO :
+    metodos no when, nao fica aninhado qnd necessario
+    STOP
+    (go->COUNTDOWN[N]) ao inves de COUNTDOWN[N]
+
+*/

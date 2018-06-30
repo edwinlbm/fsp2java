@@ -1,0 +1,52 @@
+CORES = (red->orange->{blue, gray}->green->black->CORES | rose -> purple -> yellow -> CORES).
+/*
+@TRACE
+red
+orange
+blue
+green
+black
+*/
+
+
+TRAFFICLIGHT = (red->orange->green->orange->TRAFFICLIGHT).
+/*
+@TRACE
+red
+orange
+green
+orange
+*/
+
+
+SWITCH = (on->off->SWITCH)./*
+@TRACE
+on
+off
+*/
+
+
+DRINKS = (red->coffee->DRINKS |blue->tea->DRINKS ).
+/*
+@TRACE
+red
+coffee
+*/
+
+CORES = (red->orange->{blue, gray}->green->black->CORESBR),
+CORESBR = {vermelho, verde} -> {preto, branco} -> preto -> CORESGR),
+CORESGR = ({rot, blau}->gelb->STOP | {blau, gelb}->STOP | rot ->STOP).
+/*
+@TRACE
+red
+orange
+blue
+green
+black
+verde
+branco
+preto
+blau
+gelb
+*/
+

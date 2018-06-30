@@ -1,0 +1,96 @@
+Exemplos teste:
+
+CORES = (red->orange->{blue, gray}->green->black->CORESBR),
+CORESBR = {vermelho, verde} -> {preto, branco} -> preto -> CORESGR),
+CORESGR = ({rot, blau}->{blau, gelb}->CORESGR | {blau, gelb}->CORESGR | abc -> STOP).
+/*
+@TRACE
+red
+orange
+blue
+green
+black
+
+verde
+branco
+preto
+
+abc
+*/
+
+
+CORES = (red->orange->{blue, gray}->green->black->CORES | rose -> purple -> yellow -> CORES).
+/*
+@TRACE
+red
+orange
+blue
+green
+black
+*/
+
+
+
+Exemplo com mais acao do que o necessario no TRACE
+
+CORES = (red->orange->{blue, gray}->green->black->CORES | rose -> purple -> yellow -> CORES).
+/*
+@TRACE
+red
+orange
+blue
+green
+black
+white
+*/
+
+
+Outro caminho
+
+CORES = (red->orange->{blue, gray}->green->black->CORES | rose -> purple -> yellow -> CORES).
+/*
+@TRACE
+rose
+purple
+yellow
+*/
+
+SWITCH = (off->OFF),
+OFF = (on -> ON),
+ON  = (off-> OFF).
+/*
+@TRACE
+off
+on
+off
+*/
+
+SWITCH = (on->off->SWITCH)./*
+@TRACE
+on
+off
+*/
+
+ONESHOT = (once -> STOP).
+/*
+@TRACE
+once
+*/
+
+
+TRAFFICLIGHT = (red->orange->green->orange->TRAFFICLIGHT).
+/*
+@TRACE
+red
+orange
+green
+orange
+*/
+
+
+DRINKS = (red->coffee->DRINKS |blue->tea->DRINKS ).
+/*
+@TRACE
+red
+coffee
+*/

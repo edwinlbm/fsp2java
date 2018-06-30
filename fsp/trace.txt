@@ -1,0 +1,160 @@
+
+First & follow symbols:
+----------------------
+
+Fsp3
+first:   nomeVar "const" "range" 
+follow:  EOF 
+
+Definicoes
+first:   "const" "range" 
+follow:  nomeVar 
+
+Processo
+first:   nomeVar 
+follow:  "." 
+
+ComposicaoParalela
+first:   "||" 
+follow:  "." 
+
+Const
+first:   "const" 
+follow:  nomeVar "const" "range" 
+
+Range
+first:   "range" 
+follow:  nomeVar "const" "range" 
+
+NomeInicioMai
+first:   numero nomeMin underline 
+follow:  "." "=" "(" ")" "[" "," "|" 
+
+Intervalo
+first:   numero 
+follow:  nomeVar "const" "range" "]" 
+
+Operacao
+first:   "+" "-" "*" "/" 
+follow:  numero nomeVar nomeMin 
+
+IgualdadeDesig
+first:   "==" ">" "<" ">=" "<=" "!=" 
+follow:  numero nomeVar nomeMin 
+
+Regra
+first:   nomeVar 
+follow:  "=" 
+
+Transicao
+first:   nomeMin "[" "when" "{" 
+follow:  "." ")" "," 
+
+Indice
+first:   "[" 
+follow:  "." "=" ")" "->" "," "|" 
+
+Subprocesso
+first:   "," 
+follow:  "." 
+
+ProcParametro
+first:   "(" 
+follow:  "=" 
+
+RegraTipoII
+first:   nomeVar 
+follow:  "=" 
+
+NomeInicioMin
+first:   numero nomeVar underline 
+follow:  "." ")" "[" "->" "," "|" "}" 
+
+RegraNomeVar
+first:   nomeVar 
+follow:  "." "=" "(" ")" "[" "->" "," "|" "}" 
+
+RegraNumero
+first:   numero 
+follow:  "." "=" "(" ")" "[" "->" "," "|" "}" 
+
+RegraUnderline
+first:   underline 
+follow:  "." "=" "(" ")" "[" "->" "," "|" "}" 
+
+RegraNomeMin
+first:   nomeMin 
+follow:  "." "=" "(" ")" "[" "->" "," "|" "}" 
+
+AcaoDeGuarda
+first:   "when" 
+follow:  nomeMin "[" "{" 
+
+AlfabetoExt
+first:   "{" 
+follow:  "->" 
+
+RepeteAcao
+first:   nomeMin "[" "{" 
+follow:  nomeVar "." "(" ")" "," "|" 
+
+FatoraProcesso
+first:   "(" 
+follow:  "." ")" "," "|" 
+
+Escolha
+first:   "|" 
+follow:  "." ")" "," 
+
+RepeteAcaoEscolha
+first:   nomeMin "[" "{" 
+follow:  nomeVar "." "(" ")" "," "|" 
+
+IndiceTipoI
+first:   numero nomeVar 
+follow:  "]" 
+
+IndiceTipoII
+first:   nomeMin 
+follow:  "]" 
+
+Guarda
+first:   nomeVar nomeMin "(" 
+follow:  nomeMin "[" "{" 
+
+Condicao
+first:   "(" 
+follow:  nomeMin "[" "{" 
+
+CallParentesis
+first:   "(" 
+follow:  -- empty set --
+
+Parentesis
+first:   "(" 
+follow:  ")" "||" 
+
+BlocoInterno
+first:   numero nomeVar nomeMin 
+follow:  ")" 
+
+Fator
+first:   numero nomeVar nomeMin 
+follow:  ")" "||" 
+
+Rotulo
+first:   nomeMin "forall" 
+follow:  nomeVar 
+
+ComposicaoParametrizadaTipoII
+first:   "[" 
+follow:  ":" "::" 
+
+ComposicaoParametrizadaTipoI
+first:   "forall" 
+follow:  nomeVar 
+
+RenomearRotulo
+first:   "/" 
+follow:  "." 
+

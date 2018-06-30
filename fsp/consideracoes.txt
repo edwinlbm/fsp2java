@@ -1,0 +1,588 @@
+Quarta, 24 de Janeiro de 2018
+
+    A gramática abaixo aceita as seguintes entradas:
+
+    Fsp             =  Processo ".".
+    Processo        =  Regra "=" (Transicao | nomeProcesso) Subprocesso.
+    Regra           =  nomeProcesso.
+    Transicao       =  ["("] acao "->" RepeteAcao (FatoraProcesso | nomeProcesso)[")"].
+    RepeteAcao      =  acao "->" RepeteAcao |.
+    FatoraProcesso  =  "(" acao "->" nomeProcesso ")" | .
+    Subprocesso     =  "," Regra "=" Transicao Subprocesso | .
+
+    Switch = Off,
+    Off = (on -> On),
+    On = (off-> Off).
+
+    Process = Local,
+    Local   = (b -> Stop).
+
+    O que foi feito: Action prefix ->
+        Ela reconhece nomes de processos com a inicial maiúscula ou tudo nesta forma;
+        ------=------ repetição de ações até que se chegue ao Processo: a -> b -> BLA;
+        ------=------ um processo na produção seguido da sua definição
+        ------=------ uma ação seguida do processo: Xyz = (a->Bla), ... 
+        ------=------ definição de vários subprocessos: A = (a->B), B = (c -> D), D (stop -> STOP).
+        ------=------ fatoracao de subprocessos: OFF = (on ->(off->OFF)).
+
+    To do: 
+ 
+        SWITCH = OFF,
+        OFF = (on ->(off->OFF)).
+
+        Quantidade de parêntesis abertos e fechados, melhorar.
+
+        FSP choice
+
+Quinta, 25 de Janeiro de 2018
+
+
+    Gramática desenvolvida:
+    
+    Fsp             =  Definicoes Processo ".".
+    Definicoes      =  Const Definicoes | Range Definicoes | .
+    Const           =  "const" nomeVar "=" numero.
+    Range           =  "range" nomeVar "=" Intervalo.
+    Intervalo       =   numero ".." (nomeVar | numero (Operacao nomeVar | ) ).
+    Operacao        =  "+" | "-" | "*" | "/".
+    Processo        =  Regra "=" ( ["("] Transicao [")"] | nomeVar) Subprocesso.
+    Regra           =  nomeVar ( "(" nomeVar "=" numero ")" | ).
+    Transicao       =  AcaoDeGuarda acao Indice "->" RepeteAcao (FatoraProcesso | nomeVar) Escolha.
+    RepeteAcao      =  acao Indice "->" RepeteAcao | .
+    Indice          =  "[" ( numero | acao (":" Intervalo | ) ) "]" | .
+    FatoraProcesso  =  "(" acao "->" nomeVar ")" | .
+    Subprocesso     =  "," Regra "=" ["("] Transicao [")"] Subprocesso | .
+    Escolha         =  ("|" AcaoDeGuarda acao "->" RepeteAcao (FatoraProcesso | nomeVar)) Escolha | .
+    AcaoDeGuarda    =  "when" Guarda | .
+    Guarda          =  nomeVar.
+    
+    O que foi feito: Escolha (choice), Condição de  Guarda when (Guarded action), Parâmetro de Processo (process parameter)
+
+    Considerações: 
+    A inicial de um const ou range é sempre maiúscula: const N = 3. Ambas são definidas antes do Processo;    
+    const N = 3, N assume o valor de um numero ou outra variável;
+    range T = 0..N   --> Decisão:  Vai sempre de um número até uma (variável ou número) ou
+    range R = 0..2*N --> ----=---  Só aceita este formato por enquanto, Número operação (Número ou Variável);
+    Const ou Range podem vir em qualquer ordem desde que precedam o Processo;
+    O Parâmetro de Processo tem uma variável que recebe um valor numérico.
+    Na gramática: Não há índice no fatora processo e nem na condição de guarda, ainda.
+
+    To do:
+
+        Quantidade de parêntesis abertos e fechados, melhorar;
+        
+        Indexed processes and actions;
+        
+        Guarded actions do tipo when (i>0) go->Do[2];
+        
+        Const False = 0
+        P = (when (False) doanything->P).
+
+        Colocar índice no FatoraProcesso e na condição de guarda, regra Escolha;
+
+        Aprimorar operações básicas.
+
+        Reconhecer índice no ou
+
+            BUFF = (in[0]->out[0]->BUFF
+                |in[1]->out[1]->BUFF
+                |in[2]->out[2]->BUFF
+                |in[3]->out[3]->BUFF
+            ).
+
+Sexta, 26 de Janeiro de 2018
+
+    Gramática desenvolvida:
+
+        Fsp             =  Definicoes Processo ".".
+        Definicoes      =  Const Definicoes | Range Definicoes | .
+        Const           =  "const" nomeVar "=" numero.
+        Range           =  "range" nomeVar "=" Intervalo.
+        Intervalo       =  numero ".." (nomeVar | numero (Operacao nomeVar | ) ).
+        Operacao        =  "+" | "-" | "*" | "/".
+        IgualdadeDesig  =  "==" | ">" | "<" | ">=" | "<=" | "!=".
+        Processo        =  Regra "=" ( ["("] Transicao [")"] | nomeVar Indice) Subprocesso.
+        Regra           =  nomeVar ( "(" nomeVar "=" numero ")" | Indice).
+        Transicao       =  AcaoDeGuarda nomeMin Indice "->" RepeteAcao (FatoraProcesso | nomeVar Indice) Escolha.
+        RepeteAcao      =  nomeMin Indice "->" RepeteAcao | .
+        Indice          =  "[" ( (numero  | nomeMin | nomeVar) (":" Intervalo | (Operacao(numero | nomeMin)) | ) ) "]" | .    
+        FatoraProcesso  =  "(" nomeMin Indice "->" nomeVar Indice ")" | .
+        Subprocesso     =  "," Regra "=" ["("] Transicao [")"] Subprocesso | .
+        Escolha         =  ("|" AcaoDeGuarda nomeMin Indice "->" RepeteAcao (FatoraProcesso | nomeVar Indice)) Escolha | .
+        AcaoDeGuarda    =  "when" Guarda | .
+        Guarda          =  nomeVar | Fator.
+        Fator           =  "(" (numero | nomeMin | nomeVar) [(Operacao | IgualdadeDesig) (numero | nomeMin | nomeVar)] ")".
+
+    Considerações/Decisões de projeto:
+
+        A Regra pode conter as seguintes formas: "ABC (X = 10) = (in->OUT)." ou "ABC [i:0..K] = (in->OUT)." 
+
+        Regra  =  nomeVar ( "(" nomeVar "=" numero ")" | Indice). O índice pode ser lambda, desta forma o formato [i:0..N] é opcional assim como (N=3)
+
+        A linha abaixo aceita os seguintes formatos tanto na acao quanto no processo: [0], [i], [2*2], [i*2], [2*i], [i+i], [i:0..N] e etc
+        Indice =  "[" ( (numero  | nomeMin) (":" Intervalo | (Operacao(numero | nomeMin)) | ) ) "]" | .
+
+        COUNTDOWN (N=3)   = (start->COUNT[N]) ----> COUNT poder ter como índice um número, uma variável do tipo "i" ou do do tipo "N".
+            Ou seja, tudo que for possível a partir da regra Indice.
+
+    To do:
+
+        Quantidade de parêntesis abertos e fechados, melhorar;
+        
+        Indexed processes and actions na forma matricial;
+
+        Aprimorar operações básicas;
+
+
+Sábado, 27 de Janeiro de 2018
+
+    Gramática desenvolvida:
+
+        Fsp             =  Definicoes Processo ".".
+        Definicoes      =  Const Definicoes | Range Definicoes | .
+        Const           =  "const" nomeVar "=" numero.
+        Range           =  "range" nomeVar "=" Intervalo.
+        Intervalo       =  numero ".." ( (nomeVar | nomeMin | numero) (Operacao (nomeVar | numero | nomeMin) | ) ).
+        Operacao        =  "+" | "-" | "*" | "/".
+        IgualdadeDesig  =  "==" | ">" | "<" | ">=" | "<=" | "!=".
+        Processo        =  Regra "=" ( ["("] Transicao [")"] | nomeVar Indice) Subprocesso.
+        Regra           =  nomeVar ( "(" nomeVar "=" numero ")" | Indice).
+        Transicao       =  AcaoDeGuarda ( (nomeMin Indice)  | AlfabetoExt  ) "->" RepeteAcao (FatoraProcesso | nomeVar Indice) Escolha.
+        RepeteAcao      =  nomeMin Indice "->" RepeteAcao | .
+        Indice          =  "[" (IndiceTipoI | IndiceTipoII) "]" Indice | .
+        IndiceTipoI     =  (numero |  nomeVar) ( (Operacao(numero | nomeMin | nomeVar)) | ).
+        IndiceTipoII    =  nomeMin ( ( ":" (Intervalo | nomeVar ) ) | (Operacao(numero | nomeMin | nomeVar)) | ).
+        FatoraProcesso  =  "(" nomeMin Indice "->" nomeVar Indice ")" | .
+        Subprocesso     =  "," Regra "=" ["("] Transicao [")"] Subprocesso | .
+        Escolha         =  ("|" AcaoDeGuarda ( (nomeMin Indice) | AlfabetoExt ) "->" RepeteAcao (FatoraProcesso | nomeVar Indice)) Escolha | .
+        AcaoDeGuarda    =  "when" Guarda | .
+        Guarda          =  nomeVar | Fator.
+        Fator           =  "(" (numero | nomeMin | nomeVar) [(Operacao | IgualdadeDesig) (numero | nomeMin | nomeVar)] ")".
+        AlfabetoExt     =  "{" nomeMin {"," nomeMin} "}".
+
+    Considerações/Decisões:
+
+        Mudei a regra Intervalo para gerar 0..i*i, 0..2*i, 0..N*2
+
+        Mudei a regra Indice subdividindo a mesma em IndiceTipoI e IndiceTipoII para evitar 2:0..0, deve-se seguir a forma [i:N], [i:0..2], [i*2], [i*N] e etc.
+            Não aceita no formato: [s:i] e [s:10]
+        
+        A gramática aceita a forma matricial: in[a:T][b:T], os índices seguem as mesmas formas citadas acima.
+
+        --------=--------- uma versão básica do tópico de alfabeto: {suspend,sleep}->NONRUNNABLE.
+
+
+        To do:
+
+            Quantidade de parêntesis abertos e fechados, melhorar;
+            
+            Aprimorar operações básicas;
+
+            Adcionar Alfabeto com o "+" de forma elegante e ler o livro para melhorar a extensão do alfabeto;
+
+            Iniciar a codificação em Java;
+
+            Pesquisar leitura e escrita sem zerar o arquivo em Java;
+
+            Estudar Threads em Java;
+
+            Testar a gramática com exemplos do livro e outros;
+
+            Subir os arquivos para o GitHub, versão por versão para ter controle das mudanças, cada evolução da gramática.
+
+Domingo, 28 de Janeiro de 2018
+
+    A gramática não foi alterada
+    
+    O que foi feito:
+
+        Criação de classe para manipular arquivo;
+        Duplicação da regra "Regra" em Regra e RegraTipoII para facilitar a obtenção única do nome da classe
+        Criação de um diretório para o Output do compilador
+        Obtenção do nome da classe já adaptado para Java
+        Obteção das contantesjá adptado para Java
+
+
+    To do:
+        Dividir o arquivo em classes para legibilidade
+
+        Criar o diretório /Saida/ de maneira automática
+
+        Continuar a geração de código
+
+        Pesquisar uma forma de adaptar range para java
+
+        Pesquisar const em java
+
+        Quantidade de parêntesis abertos e fechados, melhorar;
+            
+        Aprimorar operações básicas;
+
+        Adicionar Alfabeto com o "+" de forma elegante e ler o livro para melhorar a extensão do alfabeto;
+        
+        Estudar Threads em Java;
+
+        Testar a gramática com exemplos do livro e outros;
+
+        Subir os arquivos para o GitHub, versão por versão para ter controle das mudanças, cada evolução da gramática.
+
+
+Terça, 30 de Janeiro de 2018
+
+    O que foi feito:
+        Detecção de metodos, e métodos dentro de outros métodos;
+        O FatoraProcesso só ocorre no final;
+
+
+    To do:
+        Separar o flush do escrever para não "forçar escrita no disco a todo momento"
+
+        Melhorar o FatoraProcesso para aparecer em qualquer ordem
+
+        Detectar/Diferenciar métodos repetidos
+
+        Pensar em como fazer os métodos com ou implicando em não-determinismo:
+            COIN  = (toss->HEADS|toss->TAILS),
+            HEADS = (heads->COIN),
+            TAILS = (tails->COIN).
+
+            Estudar sobrecarga de métodos, métodos com o mesmo nome mas parâmetros diferentes;
+                -->Uma ideia seria escrever o método com nome duplicado e em seu parâmetro mudar
+                ou
+                --> Não limpar o array e verificar se a string já existe
+
+        Arrumar os parâmetros para virem na ordem correta ----> RegraTipoII
+
+        Add implements Runnable e extends applet
+
+        Verficar a ordem do métodos do alfabeto
+
+        Estudar atributos em coco r
+
+        Dividir o arquivo em classes para legibilidade
+
+        Criar o diretório /Saida/ de maneira automática
+
+        Continuar a geração de código
+
+        Pesquisar uma forma de adaptar range para java
+
+        Pesquisar const em java
+
+        Quantidade de parêntesis abertos e fechados, melhorar;
+            
+        Aprimorar operações básicas;
+
+        Adicionar Alfabeto com o "+" de forma elegante e ler o livro para melhorar a extensão do alfabeto;
+        
+        Estudar Threads em Java;
+
+        Testar a gramática com exemplos do livro e outros;
+
+        Subir os arquivos para o GitHub, versão por versão para ter controle das mudanças, cada evolução da gramática.
+
+
+Quarta, 31 de Janeiro de 2018
+
+    O que foi feito:
+        Adição de métodos para criar, iniciar e pausar a thread
+            -- A ideia é que os métodos sejam chamados pelos métodos no processo de maneira conveniente
+
+        A classe estende applet e implementa runnable
+        
+        As condições são detectadas
+
+        Range em java que "equivale" ao range da notação fsp
+            import java.util.Random se há range
+        
+        Definição de objeto da Thread
+
+        Método run com as condições e ações tomadas se determinada condição for válida
+
+     To do:
+        Separar o flush do escrever para não "forçar escrita no disco a todo momento"
+
+        Melhorar o FatoraProcesso para aparecer em qualquer ordem (como é a fatoração de um processo, é sempre no fim. Não deve ser preciso)
+
+        Detectar/Diferenciar métodos repetidos
+
+        Pensar em como fazer os métodos com ou implicando em não-determinismo:
+            COIN  = (toss->HEADS|toss->TAILS),
+            HEADS = (heads->COIN),
+            TAILS = (tails->COIN).
+
+            Estudar sobrecarga de métodos, métodos com o mesmo nome mas parâmetros diferentes;
+                -->Uma ideia seria escrever o método com nome duplicado e em seu parâmetro mudar
+                ou
+                --> Não limpar o array e verificar se a string já existe
+
+        Arrumar os parâmetros para virem na ordem correta ----> RegraTipoII
+
+        Verficar a ordem do métodos do alfabeto
+
+        Estudar atributos em coco r
+
+        Dividir o arquivo em classes para legibilidade
+
+        Criar o diretório /Saida/ de maneira automática
+
+        Continuar a geração de código
+
+        Pesquisar uma forma de adaptar range para java (Verificar se a forma feita está adequada)
+
+        Pesquisar const em java (Verificar se static final é melhor do que apenas final)
+
+        Quantidade de parêntesis abertos e fechados, melhorar;
+            
+        Aprimorar operações básicas;
+
+        Adicionar Alfabeto com o "+" de forma elegante e ler o livro para melhorar a extensão do alfabeto;
+        
+        Estudar Threads em Java;
+
+        Testar a gramática com exemplos do livro e outros;
+
+        Subir os arquivos para o GitHub, versão por versão para ter controle das mudanças, cada evolução da gramática.
+
+        Falta declarar a variável da condição no método run
+
+
+Reunião, 1 de Fevereiro de 2018
+        SBMF  - artig: simposio-brasileiro-de-metodos-formais
+
+        ESBMC - model checker
+
+        assertiva -- talvez usar
+        anderson -- possível ajuda
+
+        To do:
+
+            Instrumentacao do código;
+
+            Isolar as partes que são dependentes da linguagem de programação;
+
+            Classes para cada processo de forma a abrigar os seus métodos;
+
+            Se não houver um processo definido -----> Apresentar erro;
+
+            add BLA = . ------> para parar a execução se preciso, uma espécie de lambda;
+
+            Fazer a ligação com Applets, mesmo que básica;
+
+            Colocar o stop thread dentro do stop e etc;
+
+            Resolver o não determinismo por meio de input do usuário, se ele não informar ou colocar inválido, então o processo não ocorre.
+                Algo interessante é fazer o mesmo para a opção de linguagem na saída
+
+
+Terça(6) e Quarta(7) - Fevereiro de 2018
+
+    TODO --> Verificar para 3 ou mais Ou's  de uma única vez -> Nao determinismo -- OK
+    
+    Arrumar o fatora processo
+    
+    Verificar se o Escolha de nao determinismo funciona em subProcessos -- OK 
+    
+    Arrumar a saida tails/heads/abc no terminal  -- OK
+    
+    Talvez remover um item do array <pares>, o processo que nao foi escolhido ou substituir o conteudo  -- OK
+    
+    Encontrar uma maneira de relacionar as classes com uma principal que possua o recurso a thread e applet
+    
+    Perguntar
+    Gero os metodos nao ambiguos em um OU e o usuario depois executa qual quiser ou
+    Faço uma nova leitura pra decidir qual caminho seguir?
+                        Pensamento: Primeiro tira a ambiguidade ou 
+                        Grava todos num arraylist de par talvez e depois pergunta do user qual caminho seguir?
+    
+    Problema: A ordem do alfabeto e a realacao com repeticoes, na gramatica atual ha um alfabeto seguido de repeticioes de acoes..ou só
+    repeticoes de acoes
+    Minha opiniao: pode sim haver uma repeticao de acoes apos um alfabeto -- VERIFICADO no LTSA
+    E preciso verificar se pode haver uma repeticao antes de um alfabeto  -- VERIFICADO no LTSA
+    
+    Fazer o alfabeto, agora que está em qualquer ordem, deve-se pensar em como capturar o nome do Processo e acoes aninhadas junto com
+    alfabetos
+    
+    Checar essas e outras duvidas se possivel no software LTSA
+                        STOP é uma palavra reservada  -- Verificado
+                        Olhar o animator e verificar como fazer algo similar em java com applets
+
+    Gramatica alterada para suportar Alfabeto em qualquer ordem
+
+    Obs: Se passar um atributo na regra e processo sem out ele nao reclama de inicializar
+
+Quinta, 8 de Fevereiro de 2018
+    Exemplo pontual:
+        COIN  = (toss->HEADS|toss->TAILS),
+            HEADS = (heads->abc->COIN),
+            TAILS = (oeee->{tails,ole}->teste->{adasd, asdasg}->MOEDA),
+			MOEDA = (abc->STOP).
+
+            Usar entrada do usuário? Há mais de um caminho possível.
+                Pode haver multiplas definicoes de alfabeto para o mesmo Processo?
+
+    Dúvida:
+        	public void teste(){ Moeda objMoeda = new Moeda(); }
+                Pensando em fatoracao:
+                        Se o processo invocado pela ação tiver só um método --> então Moeda.metodo();
+                                    Onde essa relacão estaria em um hash[MOEDA] -> [acao/metodo]
+                                            Só precisaria da primeira ação pois ela desencadeia as demais
+                                            Agora se tive nao determinismo, uma escolha deve ser feita antes de gravar no hash talvez
+                                            Ou, o sujeito olha a classe e escolhe o metodo que quiser invocar
+
+            public void abc(){ Stop objStop = new Stop(); }
+                STOP é uma palavra reservada para finalizar o processo, em vez de instanciar um obj é melhor parar a thread
+
+    Ideia: 
+        RUNNING      = ({suspend,sleep}->NONRUNNABLE).
+            Se não definir o subprocesso, apresentar erro! O único que pode ocorrer sem definição é STOP.
+                A ideia de armazenar em um hash é boa, bastaria buscar no hash o processo sem metodos e que seja diferente de STOP.
+                Se ocorrer rejeita o processo FSP.
+        
+        
+        To do: 
+                Na regra Escolha deve-se escolher apenas uma delas e depois se tiver alfabeto escolher um método
+                        Gravar tudo em uma ED e depois perguntar do user
+                            Se tiver "when" se verdadeiro ele habilia todos os OU's
+                                Caso contrário, apenas o ou que nõa há a condição "when"
+        
+
+Segunda, Terça e Quarta (19, 20, 21) - Fevereiro de 2018
+
+    O que foi feito:
+        Criação da classe ArrayLisa que contem em cada posição o nome do processo invocado pela ação/metodo e um array de metodos
+            Esse array é importante para solucionar o não determinismo e a escolha de um caminho no OU "|"
+        
+        A regra RepeteAcao foi replicada com o nome RepeteAcaoEscolha para isolar partes do código e ser exclusiva do Escolha
+
+        Criacao dos metodos inputEscolha (leitura do teclado para escolha de caminho), addToArrayEscolha (copia métodos para o ArrayLista), imprimeArrayLista
+
+        O Subprocesso está funcionando com o recurso de extensão do alfabeto e escolhas e as escrevendo no disco
+
+        Reformatação do código
+
+        Regra ProcPamaeter acrescida pois na primeira "Regra" do FSP é que define as constantes para uso posterior 
+
+        Alteração da regra Intervalo de numero..etc para "0"..etc 
+
+    To do:
+
+        Arrumar o when para só perguntar se não for loop(estratégia inicial)
+        
+        Arrumar escrita no caso de :
+            COIN (N = 3, K = 5)  = (toss->abc->COIN[K]),
+            COIN[j:0..K] =
+
+            Esta escrevendo duas vezes a mesma classe
+
+        Ter uma estrutura que acesse pelo nome do processo e pege a acao para colocar apos o = new objeto() para chamar o método conveniente
+
+        Forma de detectar repeticao:
+            ... = (asdsa->ABC[N]),
+            [i:0..N]    = É uma repetição
+
+
+        Arrumar a regra Indice, nem sempre pode multiplicar ou somar
+            Fazer a diferenciacao quando é uma chamada de processo, definição de processo, matriz e etc.
+            Verificar como fica no caso da matriz
+
+        Verificar se o input é valido quando há "when" nesse caso parece ser mais apropriado gerar código direto e no código
+        fazer os if para cada "when". Talvez usar uma flag para verficar se há "when" ou não. Se não ocorrer, fazer o input.
+        
+        Pensar em como fazer algo similar ao animator (quando se deve ou não habilitar uma ação):
+            Olhar o exemplo como base para ideias:
+                COIN (N = 3, K = 5)  = (toss->abc->COIN[K]),
+                COIN[j:0..K] = 
+                (
+                    when (N<j) repita->COIN[j-1]
+                    | when (N==j) notifique->ST
+                    | pare->STOP  
+                ),
+                ST = (fim->STOP).
+        
+        Na regra Escolha deve-se escolher apenas uma delas e depois se tiver alfabeto escolher um método
+                        Gravar tudo em uma ED e depois perguntar do user
+                            Se tiver "when" se verdadeiro ele habilia todos os OU's
+                                Caso contrário, apenas o ou que nõa há a condição "when" 
+
+        Colocar o stop thread dentro do stop e etc;
+        
+        Fazer a ligação com Applets, mesmo que básica;
+
+        Verificar se todos os processos estão bem definidos via Java  
+        
+        Arrumar o optAlfabeto para se perguntado após o escolha
+
+        Arrumar o fatora processo        
+                
+        Encontrar uma maneira de relacionar as classes com uma principal que possua o recurso a thread e applet
+        
+        Se não houver um processo definido -----> Apresentar erro;
+        
+        Fazer o alfabeto, agora que está em qualquer ordem, deve-se pensar em como capturar o nome do Processo e acoes aninhadas junto com
+        alfabetos
+        
+        Checar essas e outras dúvidas se possivel no software LTSA
+                            STOP é uma palavra reservada  -- Verificado
+                            Olhar o animator e verificar como fazer algo similar em java com applets
+
+        Instrumentacao do código;
+
+        Isolar as partes que são dependentes da linguagem de programação;
+
+        add BLA = . ------> para parar a execução se preciso, uma espécie de lambda;
+
+
+        Resolver o não determinismo por meio de input do usuário, se ele não informar ou colocar inválido, então o processo não ocorre.
+            Algo interessante é fazer o mesmo para a opção de linguagem na saída
+
+        Separar o flush do escrever para não "forçar escrita no disco a todo momento"
+
+        Melhorar o FatoraProcesso para aparecer em qualquer ordem (como é a fatoração de um processo, é sempre no fim. Não deve ser preciso)
+
+        Detectar/Diferenciar métodos repetidos
+
+        Criar o diretório /Saida/ de maneira automática
+
+        Pesquisar uma forma de adaptar range para java (Verificar se a forma feita está adequada)
+
+        Pesquisar const em java (Verificar se static final é melhor do que apenas final)
+        
+        Quantidade de parêntesis abertos e fechados, melhorar;
+
+        Aprimorar operações básicas;
+
+        Declarar a variável da condição no método run
+
+        Adicionar Alfabeto com o "+" de forma elegante e ler o livro para melhorar a extensão do alfabeto;
+            
+        Estudar Threads em Java;
+
+        Testar a gramática com exemplos do livro e outros;
+        
+        Subir os arquivos para o GitHub, versão por versão para ter controle das mudanças, cada evolução da gramática.
+
+
+
+
+
+
+        COIN (N = 3) = (toss->abc->A[N] | tack->{ijk, fgh}->C | tic->{rf, mu}->C),
+        A [i:0..N]     = (heads->wio->C),
+        C     = (finalize->{dot, com}->STOP | exit->STOP).
+
+
+        N tem de ser informado [N] e [i:0..N] para valer em A
+
+
+        const G = 10
+        range J = 2..2*G
+
+        COIN (N = 3, K = 10)  = (toss->abc->COIN[K]),
+        COIN[j:0..K*2*K] = 
+        (
+            when (N<j) repita->COIN[j-1]
+            | when (N==j) notifique->ST
+            | pare->STOP  
+        ),
+        ST = (fim->STOP).
